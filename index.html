@@ -19,6 +19,34 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<style id="admin-ui">
+/* ===== แผงเจ้าหน้าที่: แท็บ แถบเครื่องมือ ปุ่ม ===== */
+.admin-shell{max-width:1280px}
+.admin-nav{display:flex;gap:6px;padding:6px;margin:18px 0 22px;background:#fff;border:1px solid #E6E0D2;border-radius:16px;box-shadow:0 4px 14px rgba(22,33,62,.06);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.admin-nav button{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:0;border-radius:11px;background:transparent;color:#5B6B8C;font:600 .95rem/1 'Kanit','Sarabun',sans-serif;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
+.admin-nav button:hover{background:#F4EFE3;color:#16213E}
+.admin-nav button.active{background:#16213E;color:#fff;box-shadow:0 4px 12px rgba(22,33,62,.28)}
+.admin-nav button:focus-visible{outline:3px solid #F5A623;outline-offset:2px}
+.admin-nav button span:empty{display:none}
+.admin-nav .dot-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#E85C4A;color:#fff;font:700 .72rem/1 'JetBrains Mono',monospace}
+.admin-panel .stat-grid{margin-bottom:22px}
+.admin-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px;padding:14px;margin-bottom:16px;background:#fff;border:1px solid #E6E0D2;border-radius:16px}
+.admin-toolbar .left{display:flex;flex-wrap:wrap;gap:10px;flex:1 1 420px;min-width:0}
+.admin-toolbar .left input[type=text]{flex:2 1 240px;min-width:0}
+.admin-toolbar .left select{flex:1 1 160px;min-width:0}
+.admin-toolbar input[type=text],.admin-toolbar select{height:44px;padding:0 14px;border:1.5px solid #E1DACB;border-radius:12px;background:#FDFBF6;font:500 .92rem 'Sarabun','Kanit',sans-serif;color:#16213E}
+.admin-toolbar input[type=text]:focus,.admin-toolbar select:focus{outline:none;border-color:#1F9C87;box-shadow:0 0 0 3px rgba(31,156,135,.18);background:#fff}
+.admin-toolbar .btn{height:44px;padding:0 20px;border-radius:12px;font-size:.9rem;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center}
+.admin-toolbar>div:last-child{display:flex;flex-wrap:wrap;gap:10px}
+.admin-toolbar .btn:active{transform:translateY(1px)}
+@media(max-width:720px){
+  .admin-nav{border-radius:14px}
+  .admin-nav button{padding:10px 14px;font-size:.88rem}
+  .admin-toolbar{padding:12px}
+  .admin-toolbar>div:last-child{width:100%}
+  .admin-toolbar>div:last-child .btn{flex:1 1 calc(50% - 10px);padding:0 10px}
+}
+</style>
 </head>
 <body>
 
