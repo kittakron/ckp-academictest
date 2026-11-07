@@ -1,0 +1,35 @@
+# =====================================================================
+# Apache (.htaccess) — บังคับ HTTPS + ความปลอดภัย
+# คัดลอกไฟล์นี้ไปวางที่โฟลเดอร์รากของเว็บ แล้วเปลี่ยนชื่อเป็น  .htaccess
+# ใช้ได้ทั้งเวอร์ชัน Cloud (HTML) และเวอร์ชัน PHP+MySQL
+# =====================================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 1) ถ้าเข้าผ่าน http ให้ redirect ถาวร (301) ไป https
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+<IfModule mod_headers.c>
+  # 2) HSTS: บอกเบราว์เซอร์ให้ใช้ https เสมอ 1 ปี
+  #    เปิดใช้หลังจากยืนยันแล้วว่า https ใช้งานได้ปกติทุกหน้า
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+  # 3) หัวความปลอดภัยทั่วไป
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+  # 4) CSP (ตรงกับที่ใช้ใน index.html; รุ่น header รองรับ frame-ancestors ได้)
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+</IfModule>
+
+# ไม่ให้เปิดไฟล์ที่ไม่ควรเผยแพร่
+<FilesMatch "\.(sql|md|log|yml|yaml)$">
+  Require all denied
+</FilesMatch>
+Options -Indexes

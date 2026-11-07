@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ===== HTTPS & ความปลอดภัย ===== -->
+<script>
+  // ถ้าเปิดผ่าน http:// ให้เด้งไป https:// อัตโนมัติ (ยกเว้นทดสอบในเครื่อง)
+  if (location.protocol === 'http:' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+    location.replace('https:' + location.href.substring(location.protocol.length));
+  }
+</script>
+<!-- CSP: อนุญาตเฉพาะแหล่งที่เว็บนี้ใช้จริง (jsDelivr สำหรับ supabase-js, Google Fonts, และ Supabase) ถ้าใช้โดเมน Supabase ของตัวเอง ให้เพิ่มใน connect-src -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>SciMath Test — ระบบรับสมัครสอบวัดความรู้ วิทยาศาสตร์-คณิตศาสตร์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+
+<header class="site">
+  <div class="nav-bar">
+    <button class="brand" onclick="go('home')" aria-label="กลับหน้าแรก">
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="23" fill="none" stroke="#F5A623" stroke-width="0.8" stroke-dasharray="1.4 3"/>
+        <circle cx="24" cy="24" r="20" fill="#16213E"/>
+        <circle cx="24" cy="24" r="3.6" fill="#F5A623"/>
+        <ellipse cx="24" cy="24" rx="16.5" ry="7.2" stroke="#1F9C87" stroke-width="1.5" fill="none"/>
+        <ellipse cx="24" cy="24" rx="16.5" ry="7.2" stroke="#F5A623" stroke-width="1.5" fill="none" transform="rotate(60 24 24)"/>
+        <ellipse cx="24" cy="24" rx="16.5" ry="7.2" stroke="#E85C4A" stroke-width="1.5" fill="none" transform="rotate(120 24 24)"/>
+      </svg>
+      <span class="brand-text">
+        <div class="name" data-s="org_name">ศูนย์พัฒนาอัจฉริยภาพวิทยาศาสตร์-คณิตศาสตร์</div>
+        <div class="sub"><span data-s="site_name">SciMath Test</span> — ระบบรับสมัครสอบวัดความรู้ ระดับประถมศึกษา</div>
+      </span>
+    </button>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="เปิดเมนู">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="tabs" id="navTabs">
+      <button class="tab-btn" data-view="home" onclick="go('home')">หน้าแรก</button>
+      <button class="tab-btn" data-view="news" onclick="go('news')">ข่าวสาร</button>
+      <button class="tab-btn" data-view="register" onclick="go('register')">สมัครสอบ</button>
+      <button class="tab-btn" data-view="studentlogin" onclick="go('studentlogin')">เข้าสู่ระบบ</button>
+      <button class="tab-btn" data-view="teacherlogin" onclick="go('teacherlogin')">ครูที่ปรึกษา</button>
+      <button class="tab-btn" data-view="results" onclick="go('results')">ประกาศผลสอบ</button>
+      <button class="tab-btn" data-view="contact" onclick="go('contact')">ติดต่อ</button>
+      <button class="tab-btn admin-link" data-view="admin" onclick="go('admin')">สำหรับเจ้าหน้าที่</button>
+    </nav>
+  </div>
+</header>
+
+<div id="setupBanner"></div>
+<div id="statusBanner"></div>
+
+<main>
+
+<!-- ============ HOME ============ -->
+<section class="view active" id="view-home">
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow">เปิดรับสมัคร ปีการศึกษา 2569</div>
+        <h1>ค้นพบนักวิทย์-นักคิดตัวน้อย<br>ใน<span class="accent" data-s="site_name">SciMath Test</span></h1>
+        <p class="lede">การทดสอบวัดความรู้วิทยาศาสตร์และคณิตศาสตร์ สำหรับนักเรียนระดับประถมศึกษาปีที่ 4–6 เปิดโอกาสให้เด็ก ๆ ได้วัดระดับความสามารถ พร้อมใบประกาศนียบัตรสำหรับผู้เข้าสอบทุกคน</p>
+        <div class="hero-cta">
+          <button class="btn btn-primary" onclick="go('register')">สมัครสอบตอนนี้</button>
+          <button class="btn btn-outline" onclick="go('manual')">ดูขั้นตอนการสมัคร</button>
+        </div>
+        <div class="countdown" id="countdown"></div>
+      </div>
+      <div class="orbit-wrap">
+        <svg viewBox="0 0 320 320">
+          <circle cx="160" cy="160" r="10" fill="#F5A623"/>
+          <g stroke="#1F9C87" stroke-width="1.6" fill="none" opacity="0.55">
+            <ellipse cx="160" cy="160" rx="130" ry="54"/>
+          </g>
+          <g stroke="#E85C4A" stroke-width="1.6" fill="none" opacity="0.55" transform="rotate(60 160 160)">
+            <ellipse cx="160" cy="160" rx="130" ry="54"/>
+          </g>
+          <g stroke="#16213E" stroke-width="1.6" fill="none" opacity="0.45" transform="rotate(120 160 160)">
+            <ellipse cx="160" cy="160" rx="130" ry="54"/>
+          </g>
+          <g>
+            <circle r="6" fill="#1F9C87">
+              <animateTransform attributeName="transform" type="rotate" from="0 160 160" to="360 160 160" dur="9s" repeatCount="indefinite"/>
+              <animateMotion dur="9s" repeatCount="indefinite" path="M30,160 A130,54 0 1,1 290,160 A130,54 0 1,1 30,160"/>
+            </circle>
+          </g>
+          <g transform="rotate(60 160 160)">
+            <circle r="6" fill="#E85C4A">
+              <animateMotion dur="7s" repeatCount="indefinite" path="M30,160 A130,54 0 1,1 290,160 A130,54 0 1,1 30,160"/>
+            </circle>
+          </g>
+          <g transform="rotate(120 160 160)">
+            <circle r="6" fill="#16213E">
+              <animateMotion dur="12s" repeatCount="indefinite" path="M30,160 A130,54 0 1,1 290,160 A130,54 0 1,1 30,160"/>
+            </circle>
+          </g>
+          <text x="160" y="290" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#5B6B8C">วิทย์ + คณิต = SciMath</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <section class="block" id="statsSection" style="padding-top:20px;">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">สถิติการสมัคร</div>
+        <h2>จำนวนผู้สมัครสอบ</h2>
+        <p id="statsAsOf">ข้อมูลล่าสุดจากระบบ</p>
+      </div>
+      <div class="stats-split">
+        <div class="stats-big">
+          <div class="card stat-card"><div class="lab">ผู้สมัครทั้งหมด</div><div class="val" id="hsTotal">–</div></div>
+          <div class="card stat-card"><div class="lab">ได้รับการอนุมัติแล้ว</div><div class="val" id="hsApproved" style="color:var(--teal-deep);">–</div></div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>ระดับชั้น</th><th>สมัคร (คน)</th><th>อนุมัติแล้ว (คน)</th></tr></thead>
+          <tbody id="hsGrades"><tr><td colspan="3" style="color:var(--ink-light);">กำลังโหลด...</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="newsSection" style="display:none;">
+    <div class="wrap">
+      <div class="section-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px; max-width:none;">
+        <div><div class="kicker">ข่าวสาร</div><h2>ประกาศ / ข่าวประชาสัมพันธ์</h2></div>
+        <a class="btn btn-outline" href="#news">ดูข่าวทั้งหมด</a>
+      </div>
+      <div class="news-grid" id="homeNewsGrid"></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">วิชาที่เปิดสอบ</div>
+        <h2>เลือกสอบได้ทั้งสองวิชา หรือวิชาใดวิชาหนึ่ง</h2>
+        <p>ข้อสอบออกแบบให้เหมาะกับระดับชั้นประถมศึกษาปีที่ 4–6 เน้นการคิดวิเคราะห์และการประยุกต์ใช้ความรู้ ไม่ใช่การท่องจำ</p>
+      </div>
+      <div class="subject-grid">
+        <div class="card subject-card">
+          <svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="#1F9C87" opacity=".12"/><path d="M17 10h10M19 10v7l-6 12a3 3 0 0 0 2.7 4.3h12.6A3 3 0 0 0 31 29l-6-12v-7" stroke="#1F9C87" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>วิทยาศาสตร์</h3>
+          <p>ครอบคลุมสิ่งมีชีวิต วัสดุและสาร แรงและพลังงาน โลกและอวกาศ ตามมาตรฐานหลักสูตรระดับประถมศึกษา</p>
+          <div class="fee"><b data-s="subject_fee" style="font-weight:inherit">150</b> <span>บาท</span></div>
+        </div>
+        <div class="card subject-card">
+          <svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="#E85C4A" opacity=".12"/><path d="M13 13h18M13 31h18M17 13l10 18M27 13 17 31" stroke="#E85C4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>คณิตศาสตร์</h3>
+          <p>ครอบคลุมจำนวนและการดำเนินการ เรขาคณิต การวัด สถิติเบื้องต้น และการแก้โจทย์ปัญหา</p>
+          <div class="fee"><b data-s="subject_fee" style="font-weight:inherit">150</b> <span>บาท</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" style="background:var(--paper-dim);">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">กำหนดการ</div>
+        <h2>ไทม์ไลน์การรับสมัครสอบ</h2>
+      </div>
+      <div class="timeline">
+        <div class="tl-item" data-n="1"><div class="date" data-s="date_reg">1 – 31 สิงหาคม 2569</div><h4>เปิดรับสมัครออนไลน์</h4><p>กรอกใบสมัคร ชำระค่าสมัคร และอัปโหลดสลิปผ่านระบบ</p></div>
+        <div class="tl-item" data-n="2"><div class="date" data-s="date_list">10 กันยายน 2569</div><h4>ประกาศรายชื่อผู้มีสิทธิ์สอบ</h4><p>ตรวจสอบสถานะการอนุมัติผ่านเมนู "เข้าสู่ระบบ"</p></div>
+        <div class="tl-item" data-n="3"><div class="date" data-s="date_card">14 กันยายน 2569</div><h4>พิมพ์บัตรประจำตัวผู้เข้าสอบ</h4><p>ผู้ที่ได้รับการอนุมัติพิมพ์บัตรได้ที่เมนู "เข้าสู่ระบบ" (ครูที่ปรึกษาพิมพ์ทั้งกลุ่มได้ที่เมนู "ครูที่ปรึกษา")</p></div>
+        <div class="tl-item" data-n="4"><div class="date" data-s="exam_date_display">อาทิตย์ที่ 20 กันยายน 2569</div><h4>วันสอบ</h4><p>เวลา <span data-s="exam_time_display">09.00 – 12.00 น.</span> ณ <span data-s="exam_site_name">สนามสอบที่กำหนด</span></p></div>
+        <div class="tl-item" data-n="5"><div class="date" data-s="date_result">15 ตุลาคม 2569</div><h4>ประกาศผลสอบ</h4><p>ตรวจสอบผลสอบผ่านเมนู "ประกาศผลสอบ"</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">ขั้นตอนการสมัคร</div>
+        <h2>สมัครสอบให้เสร็จใน 4 ขั้นตอน</h2>
+      </div>
+      <div class="steps-grid">
+        <div class="card step-card"><div class="step-n">STEP 01</div><h4>กรอกใบสมัคร</h4><p>สมัครรายบุคคล หรือสมัครแบบโรงเรียนผ่านครูที่ปรึกษา</p></div>
+        <div class="card step-card"><div class="step-n">STEP 02</div><h4>ชำระค่าสมัคร</h4><p>โอนเงินตามยอดที่ระบบแจ้ง แล้วอัปโหลดสลิปการชำระเงิน</p></div>
+        <div class="card step-card"><div class="step-n">STEP 03</div><h4>รอการอนุมัติ</h4><p>เจ้าหน้าที่ตรวจสลิปและข้อมูล ตรวจสถานะได้ที่เมนู "เข้าสู่ระบบ"</p></div>
+        <div class="card step-card"><div class="step-n">STEP 04</div><h4>พิมพ์บัตรสอบ</h4><p>เมื่ออนุมัติแล้ว พิมพ์บัตรประจำตัวผู้เข้าสอบไปใช้ในวันสอบ</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" style="background:var(--paper-dim);">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">คำถามที่พบบ่อย</div>
+        <h2>ข้อสงสัยที่ผู้ปกครองมักถาม</h2>
+      </div>
+      <div id="faqList"></div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ STUDENT LOGIN ============ -->
+<section class="view" id="view-studentlogin">
+  <section class="block">
+    <div class="wrap login-shell">
+      <svg class="login-emblem" viewBox="0 0 96 96" fill="none">
+        <circle cx="48" cy="48" r="46" fill="none" stroke="#F5A623" stroke-width="1.4" stroke-dasharray="2 5"/>
+        <circle cx="48" cy="48" r="40" fill="#16213E"/>
+        <circle cx="48" cy="48" r="7" fill="#F5A623"/>
+        <ellipse cx="48" cy="48" rx="32" ry="14" stroke="#1F9C87" stroke-width="2" fill="none"/>
+        <ellipse cx="48" cy="48" rx="32" ry="14" stroke="#F5A623" stroke-width="2" fill="none" transform="rotate(60 48 48)"/>
+        <ellipse cx="48" cy="48" rx="32" ry="14" stroke="#E85C4A" stroke-width="2" fill="none" transform="rotate(120 48 48)"/>
+      </svg>
+      <div class="login-title">
+        <h2>เข้าสู่ระบบผู้สมัครสอบ</h2>
+        <div class="sub" id="loginOrgName"></div>
+        <p style="font-size:.84rem; color:var(--ink-light); margin-top:10px;">ตรวจสอบสถานะการสมัคร พิมพ์บัตรประจำตัวผู้เข้าสอบ และดูประกาศผลสอบได้ในที่เดียว</p>
+      </div>
+
+      <div class="card login-card">
+        <div class="error-msg" id="loginError"></div>
+        <form onsubmit="return studentLogin(event)">
+          <div class="field">
+            <label for="l-idcard">เลขบัตรประจำตัวประชาชนของนักเรียน</label>
+            <input type="text" id="l-idcard" inputmode="numeric" maxlength="13" placeholder="กรอกเลข 13 หลัก" required>
+          </div>
+          <div class="field">
+            <label for="l-bday">วัน / เดือน / ปีเกิดของนักเรียน</label>
+            <input type="date" id="l-bday" required>
+            <div class="hint">ใช้ข้อมูลชุดเดียวกับตอนสมัครสอบ</div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">เข้าสู่ระบบ</button>
+        </form>
+        <p style="text-align:center; font-size:.82rem; color:var(--ink-light); margin-top:16px;">ยังไม่เคยสมัครสอบ? <a href="#register" style="color:var(--teal-deep); font-weight:600;">สมัครสอบที่นี่</a></p>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ STUDENT PORTAL (after login) ============ -->
+<section class="view" id="view-studentportal">
+  <section class="block">
+    <div class="wrap portal-shell" id="portalContent"></div>
+  </section>
+</section>
+
+<!-- ============ REGISTER ============ -->
+<section class="view" id="view-register">
+  <section class="block">
+    <div class="wrap form-shell">
+      <div class="section-head">
+        <div class="kicker">ใบสมัครสอบ</div>
+        <h2>สมัครสอบ <span data-s="site_name">SciMath Test</span></h2>
+        <div class="reg-choose">
+          <span class="reg-choice active">สมัครรายบุคคล</span>
+          <a class="reg-choice" href="#schoolreg">สมัครแบบโรงเรียน (หลายคน) →</a>
+        </div>
+        <p>กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน ระบบจะใช้เลขประจำตัวประชาชนและวันเดือนปีเกิดในการเข้าสู่ระบบเพื่อตรวจสอบสถานะ</p>
+      </div>
+
+      <div id="regClosedNotice" class="card form-card" style="display:none; text-align:center;">
+        <h3 style="margin-bottom:10px;">ขณะนี้ปิดรับสมัครสอบแล้ว</h3>
+        <p id="regClosedMsg" style="color:var(--ink-light);"></p>
+        <button class="btn btn-teal" style="margin-top:16px;" onclick="go('checkstatus')">ตรวจสอบสถานะ / พิมพ์บัตรประจำตัวผู้เข้าสอบ</button>
+      </div>
+
+      <div id="regFormWrap" class="card form-card">
+        <div class="error-msg" id="regError"></div>
+        <form id="regForm" onsubmit="return submitRegistration(event)">
+          <fieldset>
+            <legend>รูปถ่ายติดบัตร</legend>
+            <div class="photo-upload-row">
+              <div class="photo-preview" id="photoPreview"><span class="ph">ยังไม่มีรูป</span></div>
+              <div style="flex:1;">
+                <div class="field" style="margin-bottom:6px;">
+                  <label for="f-photo">อัปโหลดรูปถ่ายนักเรียน</label>
+                  <input type="file" id="f-photo" accept="image/jpeg,image/png" onchange="handlePhotoPick(this,'photoPreview','reg')">
+                </div>
+                <div class="hint">รูปถ่ายหน้าตรง ชุดนักเรียน พื้นหลังเรียบ ไฟล์ JPG หรือ PNG ขนาดไม่เกิน 8 MB<br>ระบบจะย่อรูปให้อัตโนมัติ และรูปนี้จะแสดงบนบัตรประจำตัวผู้เข้าสอบ</div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ข้อมูลนักเรียนผู้สมัคร</legend>
+            <div class="field-row">
+              <div class="field">
+                <label for="f-prefix">คำนำหน้าชื่อ</label>
+                <select id="f-prefix" required>
+                  <option value="">เลือก</option>
+                  <option>เด็กชาย</option>
+                  <option>เด็กหญิง</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="f-grade">ระดับชั้นที่กำลังศึกษา</label>
+                <select id="f-grade" required>
+                  <option value="">เลือก</option>
+                  <option>ประถมศึกษาปีที่ 4</option>
+                  <option>ประถมศึกษาปีที่ 5</option>
+                  <option>ประถมศึกษาปีที่ 6</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="f-first">ชื่อจริง</label><input type="text" id="f-first" required></div>
+              <div class="field"><label for="f-last">นามสกุล</label><input type="text" id="f-last" required></div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="f-idcard">เลขประจำตัวประชาชน (13 หลัก)</label>
+                <input type="text" id="f-idcard" inputmode="numeric" maxlength="13" placeholder="เช่น 1100200345671" required>
+                <div class="hint">ใช้เป็นชื่อผู้ใช้งานเข้าสู่ระบบ</div>
+              </div>
+              <div class="field">
+                <label for="f-bday">วันเดือนปีเกิด</label>
+                <input type="date" id="f-bday" required>
+                <div class="hint">ใช้เป็นรหัสผ่านเข้าสู่ระบบ</div>
+              </div>
+            </div>
+            <div class="field"><label for="f-school">โรงเรียนที่กำลังศึกษาอยู่</label><input type="text" id="f-school" required></div>
+          </fieldset>
+
+          <fieldset>
+            <legend>วิชาที่สมัครสอบ</legend>
+            <label class="check-row">
+              <input type="checkbox" class="subj-check" value="วิทยาศาสตร์" data-fee="150" onchange="updateFeeTotal()">
+              <span class="ct"><span class="t">วิทยาศาสตร์</span><br><span class="d">สิ่งมีชีวิต วัสดุ แรงและพลังงาน โลกและอวกาศ</span></span>
+              <span class="fee-tag">150 ฿</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" class="subj-check" value="คณิตศาสตร์" data-fee="150" onchange="updateFeeTotal()">
+              <span class="ct"><span class="t">คณิตศาสตร์</span><br><span class="d">จำนวน เรขาคณิต การวัด สถิติ การแก้โจทย์ปัญหา</span></span>
+              <span class="fee-tag">150 ฿</span>
+            </label>
+            <div class="fee-total"><span class="lab">ค่าธรรมเนียมรวม</span><span class="amt" id="feeTotalDisplay">0 ฿</span></div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ข้อมูลผู้ปกครอง</legend>
+            <div class="field-row">
+              <div class="field"><label for="f-guardian">ชื่อ-นามสกุลผู้ปกครอง</label><input type="text" id="f-guardian" required></div>
+              <div class="field"><label for="f-phone">เบอร์โทรศัพท์ผู้ปกครอง</label><input type="tel" id="f-phone" placeholder="08X-XXX-XXXX" required></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="f-email">อีเมล (ถ้ามี)</label><input type="email" id="f-email"></div>
+              <div class="field"><label for="f-address">จังหวัด</label><input type="text" id="f-address"></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ชำระค่าสมัครและแนบสลิป</legend>
+            <div class="pay-box">
+              <div class="pay-total">ยอดที่ต้องชำระ <b id="payTotal">0 ฿</b></div>
+              <div class="pay-info" data-s="bank_info"></div>
+            </div>
+            <div class="photo-upload-row">
+              <div class="slip-preview" id="slipPreview"><span class="ph">ยังไม่มีสลิป</span></div>
+              <div style="flex:1;">
+                <div class="field" style="margin-bottom:6px;">
+                  <label for="f-slip">แนบสลิปการโอนเงิน</label>
+                  <input type="file" id="f-slip" accept="image/jpeg,image/png" onchange="handleSlipPick(this,'slipPreview','reg')">
+                </div>
+                <div class="hint">ถ่ายหรือแคปหน้าจอสลิปให้เห็นยอดเงิน วันที่ และเวลาชัดเจน (JPG/PNG) ระบบจะย่อรูปให้อัตโนมัติ เจ้าหน้าที่จะตรวจสอบและอนุมัติให้ภายหลัง</div>
+              </div>
+            </div>
+          </fieldset>
+
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">ยืนยันการสมัครสอบ</button>
+        </form>
+      </div>
+
+      <div id="regSuccessWrap" style="display:none;"></div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ CHECK STATUS ============ -->
+<section class="view" id="view-checkstatus">
+  <section class="block">
+    <div class="wrap form-shell">
+      <div class="section-head">
+        <div class="kicker">ตรวจสอบสถานะ</div>
+        <h2>ตรวจสอบสถานะการสมัครสอบ</h2>
+        <p>กรอกเลขประจำตัวประชาชนและวันเดือนปีเกิดของนักเรียนที่ใช้ตอนสมัคร เพื่อตรวจสอบสถานะการอนุมัติและสิทธิ์สอบ</p>
+      </div>
+      <div class="card form-card">
+        <div class="error-msg" id="statusError"></div>
+        <form onsubmit="return checkStatus(event)">
+          <div class="field"><label for="s-idcard">เลขประจำตัวประชาชน</label><input type="text" id="s-idcard" inputmode="numeric" maxlength="13" required></div>
+          <div class="field"><label for="s-bday">วันเดือนปีเกิด</label><input type="date" id="s-bday" required></div>
+          <button type="submit" class="btn btn-teal" style="width:100%; justify-content:center;">ตรวจสอบสถานะ</button>
+        </form>
+      </div>
+      <div id="statusResult" class="status-card"></div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section class="view" id="view-results">
+  <section class="block">
+    <div class="wrap form-shell">
+      <div class="section-head">
+        <div class="kicker">ประกาศผลสอบ</div>
+        <h2>ตรวจสอบผลการสอบ</h2>
+        <p>กรอกเลขประจำตัวประชาชนและวันเดือนปีเกิดของนักเรียนที่ใช้ตอนสมัคร เพื่อดูผลคะแนนและผลการสอบ</p>
+      </div>
+      <div class="card form-card">
+        <div class="error-msg" id="resultsError"></div>
+        <form onsubmit="return checkResults(event)">
+          <div class="field"><label for="rs-idcard">เลขประจำตัวประชาชน</label><input type="text" id="rs-idcard" inputmode="numeric" maxlength="13" required></div>
+          <div class="field"><label for="rs-bday">วันเดือนปีเกิด</label><input type="date" id="rs-bday" required></div>
+          <button type="submit" class="btn btn-teal" style="width:100%; justify-content:center;">ตรวจสอบผลสอบ</button>
+        </form>
+      </div>
+      <div id="resultsOutput" class="status-card"></div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ NEWS ============ -->
+<section class="view" id="view-news">
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">ข่าวสาร</div>
+        <h2>ข่าวสารและประกาศ</h2>
+      </div>
+      <div class="news-grid" id="newsListGrid"></div>
+      <div id="newsEmpty" class="empty-state" style="display:none;">ยังไม่มีข่าวสาร</div>
+      <div style="text-align:center; margin-top:22px;"><button class="btn btn-outline" id="newsMoreBtn" onclick="loadMoreNews()" style="display:none;">โหลดข่าวเพิ่ม</button></div>
+    </div>
+  </section>
+</section>
+
+<section class="view" id="view-newsdetail">
+  <section class="block">
+    <div class="wrap" style="max-width:780px;" id="newsDetailBox"></div>
+  </section>
+</section>
+
+<!-- ============ SCHOOL REGISTRATION ============ -->
+<section class="view" id="view-schoolreg">
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" style="max-width:70ch;">
+        <div class="kicker">สมัครแบบโรงเรียน</div>
+        <h2>ครูที่ปรึกษาสมัครให้นักเรียนหลายคน</h2>
+        <p>กรอกครั้งเดียว ชำระยอดรวมและแนบสลิปเดียว ครั้งละไม่เกิน 100 คน หลังสมัครแล้ว ครูเข้าเมนู "ครูที่ปรึกษา" เพื่ออัปโหลดรูปถ่ายนักเรียน ติดตามสถานะ และพิมพ์บัตรประจำตัวผู้เข้าสอบทั้งกลุ่ม</p>
+        <div class="reg-choose">
+          <a class="reg-choice" href="#register">← สมัครรายบุคคล</a>
+          <span class="reg-choice active">สมัครแบบโรงเรียน (หลายคน)</span>
+        </div>
+      </div>
+
+      <div id="schoolClosedNotice" class="card form-card" style="display:none; text-align:center;">
+        <h3 style="margin-bottom:10px;">ขณะนี้ปิดรับสมัครสอบแล้ว</h3>
+        <p style="color:var(--ink-light);" id="schoolClosedMsg"></p>
+      </div>
+
+      <div id="schoolFormWrap" class="card form-card" style="max-width:none;">
+        <div class="error-msg" id="schError"></div>
+        <form id="schoolForm" onsubmit="return submitSchool(event)">
+          <fieldset>
+            <legend>ข้อมูลโรงเรียนและครูที่ปรึกษา</legend>
+            <div class="field"><label for="sch-school">ชื่อโรงเรียน</label><input type="text" id="sch-school" required></div>
+            <div class="field-row">
+              <div class="field"><label for="sch-tprefix">คำนำหน้าครู</label>
+                <select id="sch-tprefix"><option>นาย</option><option>นาง</option><option>นางสาว</option><option value="">อื่น ๆ / ไม่ระบุ</option></select></div>
+              <div class="field"><label for="sch-tname">ชื่อ-นามสกุลครูที่ปรึกษา</label><input type="text" id="sch-tname" required></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="sch-tid">เลขประจำตัวประชาชนครู (13 หลัก)</label><input type="text" id="sch-tid" inputmode="numeric" maxlength="17" required>
+                <div class="hint">ใช้เป็นชื่อผู้ใช้เข้าสู่ระบบครูที่ปรึกษา</div></div>
+              <div class="field"><label for="sch-tphone">เบอร์โทรศัพท์ครู</label><input type="tel" id="sch-tphone" required>
+                <div class="hint">ใช้เป็นรหัสผ่านเข้าสู่ระบบครูที่ปรึกษา (จำไว้ให้ดี)</div></div>
+            </div>
+            <div class="field"><label for="sch-temail">อีเมลครู (ถ้ามี)</label><input type="email" id="sch-temail"></div>
+          </fieldset>
+
+          <fieldset>
+            <legend>รายชื่อนักเรียน</legend>
+            <details class="paste-box">
+              <summary>วางรายชื่อจาก Excel / Google Sheets (ประหยัดเวลา)</summary>
+              <p class="hint" style="margin:8px 0;">คัดลอกจากตารางที่มีคอลัมน์เรียงตามนี้ แล้ววางด้านล่าง (หนึ่งแถวต่อนักเรียน):<br>
+                <b>คำนำหน้า · ชื่อ · นามสกุล · เลขบัตรประชาชน · วันเกิด · ระดับชั้น (4, 5 หรือ 6)</b><br>
+                วันเกิดใช้รูปแบบ วว/ดด/ปปปป (พ.ศ. หรือ ค.ศ.) หรือ ปปปป-ดด-วว ระบบจะติ๊กทั้งสองวิชาให้ แก้ไขในตารางได้ภายหลัง</p>
+              <textarea id="sch-paste" rows="5" placeholder="เด็กชาย&#9;สมชาย&#9;ใจดี&#9;1100200345671&#9;10/05/2559&#9;5"></textarea>
+              <button type="button" class="btn btn-outline" style="margin-top:8px; padding:8px 18px; font-size:.85rem;" onclick="importPasted()">นำเข้ารายชื่อ</button>
+            </details>
+            <div class="table-wrap">
+              <table class="stu-table">
+                <thead><tr><th>#</th><th>คำนำหน้า</th><th>ชื่อ</th><th>นามสกุล</th><th>เลขบัตรประชาชน</th><th>วันเกิด</th><th>ชั้น</th><th>วิทย์</th><th>คณิต</th><th></th></tr></thead>
+                <tbody id="schStudents"></tbody>
+              </table>
+            </div>
+            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+              <button type="button" class="btn btn-outline" onclick="addStudentRow()">+ เพิ่มนักเรียน</button>
+              <span id="schCount" style="color:var(--ink-light); font-size:.88rem;"></span>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ชำระค่าสมัครรวมและแนบสลิป (สลิปเดียวทั้งกลุ่ม)</legend>
+            <div class="pay-box">
+              <div class="pay-total">ยอดรวมที่ต้องชำระ <b id="schTotal">0 ฿</b></div>
+              <div class="pay-info" data-s="bank_info"></div>
+            </div>
+            <div class="photo-upload-row">
+              <div class="slip-preview" id="schSlipPreview"><span class="ph">ยังไม่มีสลิป</span></div>
+              <div style="flex:1;">
+                <div class="field" style="margin-bottom:6px;">
+                  <label for="sch-slip">แนบสลิปการโอนเงิน</label>
+                  <input type="file" id="sch-slip" accept="image/jpeg,image/png" onchange="handleSlipPick(this,'schSlipPreview','school')">
+                </div>
+                <div class="hint">โอนเงินครั้งเดียวตามยอดรวม แล้วแนบสลิปที่นี่ ถ้ายังไม่พร้อมแนบ ครูแนบภายหลังได้ที่เมนู "ครูที่ปรึกษา" (กรณีระบบไม่บังคับแนบสลิปตอนสมัคร)</div>
+              </div>
+            </div>
+          </fieldset>
+
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">ยืนยันการสมัครแบบโรงเรียน</button>
+        </form>
+      </div>
+      <div id="schoolSuccessWrap" style="display:none;"></div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ TEACHER LOGIN / PORTAL ============ -->
+<section class="view" id="view-teacherlogin">
+  <section class="block">
+    <div class="wrap login-shell">
+      <div class="login-title">
+        <h2>เข้าสู่ระบบครูที่ปรึกษา</h2>
+        <div class="sub">ติดตามสถานะ อัปโหลดรูปนักเรียน และพิมพ์บัตรประจำตัวผู้เข้าสอบทั้งกลุ่ม</div>
+      </div>
+      <div class="card login-card">
+        <div class="error-msg" id="teacherError"></div>
+        <form onsubmit="return teacherLogin(event)">
+          <div class="field"><label for="t-idcard">เลขประจำตัวประชาชนครู</label><input type="text" id="t-idcard" inputmode="numeric" maxlength="17" placeholder="กรอกเลข 13 หลัก" required></div>
+          <div class="field"><label for="t-phone">เบอร์โทรศัพท์ที่ใช้สมัคร</label><input type="tel" id="t-phone" required><div class="hint">ใช้เบอร์เดียวกับที่กรอกตอนสมัครแบบโรงเรียน</div></div>
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">เข้าสู่ระบบ</button>
+        </form>
+        <p style="text-align:center; font-size:.82rem; color:var(--ink-light); margin-top:16px;">ยังไม่เคยสมัครแบบโรงเรียน? <a href="#schoolreg" style="color:var(--teal-deep); font-weight:600;">สมัครที่นี่</a></p>
+      </div>
+    </div>
+  </section>
+</section>
+
+<section class="view" id="view-teacherportal">
+  <section class="block">
+    <div class="wrap" id="teacherContent"></div>
+  </section>
+</section>
+
+<!-- ============ MANUAL ============ -->
+<section class="view" id="view-manual">
+  <section class="block">
+    <div class="wrap" style="max-width:760px;">
+      <div class="section-head">
+        <div class="kicker">คู่มือการใช้งาน</div>
+        <h2>วิธีใช้งานระบบรับสมัครสอบ</h2>
+      </div>
+      <div class="card" style="padding:8px 28px;">
+        <div class="manual-item">
+          <h4><span class="n">01</span> การสมัครสอบรายบุคคล</h4>
+          <p>ไปที่เมนู "สมัครสอบ" กรอกข้อมูลนักเรียนและผู้ปกครอง อัปโหลดรูปถ่ายติดบัตร เลือกวิชา (เลือกได้มากกว่า 1 วิชา) แล้วโอนเงินตามยอดที่ระบบแจ้ง และแนบสลิปการโอนเงินก่อนกดยืนยัน ระบบจะออกเลขที่สมัครให้ทันที</p>
+        </div>
+        <div class="manual-item">
+          <h4><span class="n">02</span> การสมัครแบบโรงเรียน (ครูที่ปรึกษา)</h4>
+          <p>ไปที่เมนู "สมัครสอบ" แล้วเลือก "สมัครแบบโรงเรียน" กรอกข้อมูลโรงเรียนและครู เพิ่มรายชื่อนักเรียนทีละแถว หรือคัดลอกจาก Excel มาวางครั้งเดียว โอนยอดรวมและแนบสลิปเดียวทั้งกลุ่ม จากนั้นเข้าเมนู "ครูที่ปรึกษา" (เลขบัตรครู + เบอร์โทรที่กรอกไว้) เพื่ออัปโหลดรูปถ่ายนักเรียนแต่ละคน</p>
+        </div>
+        <div class="manual-item">
+          <h4><span class="n">03</span> การตรวจสอบและการอนุมัติ</h4>
+          <p>เจ้าหน้าที่จะตรวจสลิปและข้อมูล แล้วอนุมัติหรือแจ้งเหตุผลที่ไม่อนุมัติ ผู้สมัครดูสถานะได้ที่เมนู "เข้าสู่ระบบ" (เลขบัตรนักเรียน + วันเกิด) ครูที่ปรึกษาดูได้ที่เมนู "ครูที่ปรึกษา" หากไม่อนุมัติ ให้แก้ไขตามเหตุผลที่แจ้งและอัปโหลดสลิปใหม่ ระบบจะส่งกลับไปตรวจสอบอีกครั้ง</p>
+        </div>
+        <div class="manual-item">
+          <h4><span class="n">04</span> การพิมพ์บัตรประจำตัวผู้เข้าสอบ</h4>
+          <p>เมื่อได้รับการอนุมัติแล้ว ผู้สมัครรายบุคคลพิมพ์บัตรได้ที่เมนู "เข้าสู่ระบบ" ส่วนครูที่ปรึกษาพิมพ์บัตรของนักเรียนทั้งกลุ่มพร้อมกันได้ที่เมนู "ครูที่ปรึกษา" (บัตรละ 1 หน้า) ตรวจสอบว่ารูปถ่ายแสดงถูกต้องก่อนพิมพ์</p>
+        </div>
+        <div class="manual-item">
+          <h4><span class="n">05</span> วันเข้าสอบและการตรวจผลสอบ</h4>
+          <p>นำบัตรประจำตัวผู้เข้าสอบพร้อมบัตรประชาชนหรือบัตรนักเรียนมาแสดงตัวก่อนเข้าห้องสอบอย่างน้อย 30 นาที เมื่อถึงวันประกาศผล ตรวจคะแนนได้ที่เมนู "ประกาศผลสอบ"</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section class="view" id="view-contact">
+  <section class="block">
+    <div class="wrap" style="max-width:820px;">
+      <div class="section-head">
+        <div class="kicker">ติดต่อเรา</div>
+        <h2>ข้อมูลการติดต่อและช่องทางการชำระเงิน</h2>
+      </div>
+      <div class="contact-grid">
+        <div class="card contact-item">
+          <div class="ic">📍</div>
+          <div><h5>หน่วยงานที่จัดสอบ</h5><p><b data-s="org_name" style="font-weight:600"></b><br><span data-s="contact_address"></span></p></div>
+        </div>
+        <div class="card contact-item">
+          <div class="ic">📞</div>
+          <div><h5>โทรศัพท์</h5><p><span data-s="contact_phone"></span><br>จันทร์–ศุกร์ 08.30–16.30 น.</p></div>
+        </div>
+        <div class="card contact-item">
+          <div class="ic">✉️</div>
+          <div><h5>อีเมล</h5><p data-s="contact_email"></p></div>
+        </div>
+        <div class="card contact-item">
+          <div class="ic">🏦</div>
+          <div><h5>ช่องทางชำระเงิน</h5><p data-s="bank_info"></p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ ADMIN: ADD / EDIT APPLICANT ============ -->
+<section class="view" id="view-applicantform">
+  <section class="block">
+    <div class="wrap form-shell">
+      <div class="section-head">
+        <div class="kicker">แผงควบคุมผู้ดูแลระบบ</div>
+        <h2 id="afTitle">เพิ่มผู้สมัครเข้าระบบ</h2>
+      </div>
+      <div class="card form-card">
+        <div class="error-msg" id="afError"></div>
+        <form id="applicantForm" onsubmit="return saveApplicantForm(event)">
+          <input type="hidden" id="af-editing" value="">
+
+          <fieldset>
+            <legend>รูปถ่ายติดบัตร</legend>
+            <div class="photo-upload-row">
+              <div class="photo-preview" id="afPhotoPreview"><span class="ph">ยังไม่มีรูป</span></div>
+              <div style="flex:1;">
+                <div class="field" style="margin-bottom:6px;">
+                  <label for="af-photo">อัปโหลดรูปถ่าย <span id="afPhotoHint" style="font-weight:400; color:var(--ink-light);"></span></label>
+                  <input type="file" id="af-photo" accept="image/jpeg,image/png" onchange="handlePhotoPick(this,'afPhotoPreview','af')">
+                </div>
+                <div class="hint">ไฟล์ JPG หรือ PNG ระบบจะย่อรูปให้อัตโนมัติ</div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ข้อมูลนักเรียน</legend>
+            <div class="field-row">
+              <div class="field">
+                <label for="af-prefix">คำนำหน้าชื่อ</label>
+                <select id="af-prefix" required><option value="">เลือก</option><option>เด็กชาย</option><option>เด็กหญิง</option></select>
+              </div>
+              <div class="field">
+                <label for="af-grade">ระดับชั้น</label>
+                <select id="af-grade" required><option value="">เลือก</option><option>ประถมศึกษาปีที่ 4</option><option>ประถมศึกษาปีที่ 5</option><option>ประถมศึกษาปีที่ 6</option></select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="af-first">ชื่อจริง</label><input type="text" id="af-first" required></div>
+              <div class="field"><label for="af-last">นามสกุล</label><input type="text" id="af-last" required></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="af-idcard">เลขประจำตัวประชาชน</label><input type="text" id="af-idcard" inputmode="numeric" maxlength="13" required></div>
+              <div class="field"><label for="af-bday">วันเดือนปีเกิด</label><input type="date" id="af-bday" required></div>
+            </div>
+            <div class="field"><label for="af-school">โรงเรียน</label><input type="text" id="af-school" required></div>
+          </fieldset>
+
+          <fieldset>
+            <legend>วิชาที่สมัครสอบ</legend>
+            <label class="check-row">
+              <input type="checkbox" class="af-subj" value="วิทยาศาสตร์">
+              <span class="ct"><span class="t">วิทยาศาสตร์</span></span><span class="fee-tag">150 ฿</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" class="af-subj" value="คณิตศาสตร์">
+              <span class="ct"><span class="t">คณิตศาสตร์</span></span><span class="fee-tag">150 ฿</span>
+            </label>
+            <div class="hint">หมายเหตุ: หากเอาเครื่องหมายถูกออกจากวิชาใด คะแนนของวิชานั้นที่บันทึกไว้จะถูกลบไปด้วย</div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ข้อมูลผู้ปกครอง</legend>
+            <div class="field-row">
+              <div class="field"><label for="af-guardian">ชื่อ-นามสกุลผู้ปกครอง</label><input type="text" id="af-guardian" required></div>
+              <div class="field"><label for="af-phone">เบอร์โทรศัพท์</label><input type="tel" id="af-phone" required></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="af-email">อีเมล</label><input type="email" id="af-email"></div>
+              <div class="field"><label for="af-address">จังหวัด</label><input type="text" id="af-address"></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ข้อมูลการสอบและการอนุมัติ (เจ้าหน้าที่กรอก)</legend>
+            <div class="field-row">
+              <div class="field"><label for="af-room">ห้องสอบ</label><input type="text" id="af-room" placeholder="เช่น ห้อง 301 อาคาร 3"></div>
+              <div class="field"><label for="af-seat">เลขที่นั่ง</label><input type="text" id="af-seat" placeholder="เช่น 12"></div>
+            </div>
+            <div class="field">
+              <label for="af-pay">สถานะการอนุมัติ</label>
+              <select id="af-pay"><option value="pending">รอตรวจสอบ</option><option value="approved">อนุมัติแล้ว</option><option value="rejected">ไม่อนุมัติ</option></select>
+            </div>
+          </fieldset>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary" id="afSubmitBtn">เพิ่มผู้สมัคร</button>
+            <button type="button" class="btn btn-outline" onclick="go('admindash')">ยกเลิก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ ADMIN LOGIN ============ -->
+<section class="view" id="view-admin">
+  <section class="block">
+    <div class="wrap admin-login-shell">
+      <div class="section-head" style="text-align:center; margin:0 auto 24px;">
+        <div class="kicker">สำหรับเจ้าหน้าที่</div>
+        <h2>เข้าสู่ระบบผู้ดูแล</h2>
+      </div>
+      <div class="card form-card">
+        <div class="error-msg" id="adminError"></div>
+        <form onsubmit="return adminLogin(event)">
+          <div class="field"><label for="a-email">อีเมลเจ้าหน้าที่</label><input type="email" id="a-email" autocomplete="username" required></div>
+          <div class="field"><label for="a-pass">รหัสผ่าน</label><input type="password" id="a-pass" autocomplete="current-password" required></div>
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">เข้าสู่ระบบ</button>
+        </form>
+        <p style="font-size:.75rem; color:var(--ink-light); margin-top:14px;">เจ้าหน้าที่ถูกสร้างที่ Supabase &gt; Authentication &gt; Users แล้วเพิ่มสิทธิ์ตามคู่มือ README ขั้นตอนที่ 3</p>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ ADMIN DASHBOARD ============ -->
+<section class="view" id="view-admindash">
+  <section class="block">
+    <div class="wrap admin-shell">
+      <div class="section-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div class="kicker">แผงควบคุมผู้ดูแลระบบ</div>
+          <h2>รายชื่อผู้สมัครสอบ</h2>
+        </div>
+        <button class="btn btn-outline" onclick="adminLogout()">ออกจากระบบ</button>
+      </div>
+
+      <div class="admin-nav" id="adminTabs">
+        <button class="active" data-atab="applicants" onclick="switchAdminTab('applicants')">ผู้สมัครสอบ <span id="appPendingDot"></span></button>
+        <button data-atab="results" onclick="switchAdminTab('results')">จัดการผลสอบ</button>
+        <button data-atab="batches" onclick="switchAdminTab('batches')">สมัครแบบโรงเรียน <span id="batchPendingDot"></span></button>
+        <button data-atab="announcements" onclick="switchAdminTab('announcements')">ข่าวสาร</button>
+        <button data-atab="settings" onclick="switchAdminTab('settings')">ตั้งค่าระบบ</button>
+      </div>
+
+      <!-- แท็บ: ผู้สมัครสอบ -->
+      <div class="admin-panel active" id="apanel-applicants">
+        <div class="stat-grid" id="statGrid"></div>
+
+        <div class="admin-toolbar">
+          <div class="left">
+            <input type="text" id="admSearch" placeholder="ค้นหาชื่อ / เลขบัตร / โรงเรียน" oninput="renderAdminTable()">
+            <select id="admSubjFilter" onchange="renderAdminTable()">
+              <option value="">ทุกวิชา</option>
+              <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
+              <option value="คณิตศาสตร์">คณิตศาสตร์</option>
+            </select>
+            <select id="admPayFilter" onchange="renderAdminTable()">
+              <option value="">ทุกสถานะ</option>
+              <option value="pending">รอตรวจสอบ</option>
+              <option value="approved">อนุมัติแล้ว</option>
+              <option value="rejected">ไม่อนุมัติ</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-outline" onclick="loadAdminData()">รีเฟรช</button>
+            <button class="btn btn-teal" onclick="bulkApprove()">อนุมัติที่เลือก</button>
+            <button class="btn btn-primary" onclick="openApplicantForm()">+ เพิ่มผู้สมัคร</button>
+            <button class="btn btn-teal" onclick="exportCSV()">ดาวน์โหลด CSV</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="admCheckAll" onchange="toggleCheckAll(this)" aria-label="เลือกทั้งหมด"></th><th>รูป</th><th>เลขที่สมัคร</th><th>ชื่อ-นามสกุล</th><th>ระดับชั้น</th><th>โรงเรียน</th>
+                <th>วิชาที่สมัคร</th><th>ห้องสอบ/ที่นั่ง</th><th>ค่าธรรมเนียม</th><th>สถานะ / สลิป</th><th>ผู้ปกครอง/เบอร์โทร</th><th>สมัครเมื่อ</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="admTableBody"></tbody>
+          </table>
+          <div id="admEmptyState" class="empty-state" style="display:none;">ยังไม่มีผู้สมัครสอบในระบบ</div>
+        </div>
+        <p id="admRowNote" style="font-size:.8rem; color:var(--ink-light); margin-top:10px;"></p>
+      </div>
+
+      <!-- แท็บ: สมัครแบบโรงเรียน -->
+      <div class="admin-panel" id="apanel-batches">
+        <p style="color:var(--ink-light); font-size:.88rem; margin-bottom:14px;">กลุ่มที่ครูที่ปรึกษาสมัครให้นักเรียนหลายคน การอนุมัติ/ไม่อนุมัติจะมีผลกับนักเรียนทุกคนในกลุ่มพร้อมกัน</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>เลขกลุ่ม</th><th>โรงเรียน</th><th>ครูที่ปรึกษา / เบอร์โทร</th><th>นักเรียน (คน)</th><th>ยอดรวม</th><th>สลิป</th><th>สถานะ</th><th>สมัครเมื่อ</th><th></th></tr></thead>
+            <tbody id="admBatchBody"></tbody>
+          </table>
+          <div id="admBatchEmpty" class="empty-state" style="display:none;">ยังไม่มีการสมัครแบบโรงเรียน</div>
+        </div>
+      </div>
+
+      <!-- แท็บ: จัดการผลสอบ -->
+      <div class="admin-panel" id="apanel-results">
+        <div class="card" style="padding:24px; margin-bottom:24px;">
+          <div class="sec-title">ตั้งค่าการประกาศผลสอบ</div>
+          <div class="toggle-row">
+            <label class="switch">
+              <input type="checkbox" id="admResultsToggle" onchange="onToggleResultsStatus()">
+              <span class="slider-tog"></span>
+            </label>
+            <span id="admResultsLabel" style="font-family:'Kanit'; font-weight:600;"></span>
+          </div>
+          <div class="field">
+            <label for="admResultsMsg">ข้อความที่แสดงก่อนถึงวันประกาศผล</label>
+            <textarea id="admResultsMsg" rows="2" placeholder="เช่น ผลสอบจะประกาศวันที่ 15 ตุลาคม 2569 กรุณากลับมาตรวจสอบอีกครั้ง"></textarea>
+          </div>
+          <button class="btn btn-outline" onclick="saveResultsMessage()">บันทึกข้อความ</button>
+        </div>
+
+        <div class="card" style="padding:24px;">
+          <div class="sec-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span>กรอกคะแนนและผลสอบรายบุคคล</span>
+            <button class="btn btn-primary" style="padding:8px 18px; font-size:.85rem;" onclick="saveAllResults()">บันทึกทั้งหมด</button>
+          </div>
+          <p style="color:var(--ink-light); font-size:.85rem; margin-bottom:14px;">พิมพ์คะแนน (0–100) ระบบจะเลือก ผ่าน/ไม่ผ่าน ให้อัตโนมัติตามคะแนนผ่านเกณฑ์ (ตั้งค่าได้ที่แท็บ "ตั้งค่าระบบ") แก้ไขเองได้ จากนั้นกด "บันทึก" รายแถว หรือ "บันทึกทั้งหมด"</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>เลขที่สมัคร</th><th>ชื่อ-นามสกุล</th><th>วิทยาศาสตร์</th><th>คณิตศาสตร์</th><th></th></tr></thead>
+              <tbody id="admResultsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- แท็บ: ข่าวสาร -->
+      <div class="admin-panel" id="apanel-announcements">
+        <div class="card" style="padding:24px;">
+          <div class="sec-title" id="newsFormTitle">เพิ่มข่าวสาร</div>
+          <input type="hidden" id="news-editing" value="">
+          <div class="field"><label for="admAnnTitle">หัวข้อข่าว</label><input type="text" id="admAnnTitle" placeholder="เช่น เปิดรับสมัครสอบ ปีการศึกษา 2569"></div>
+          <div class="field"><label for="admAnnDesc">คำอธิบายสั้น (แสดงในการ์ดข่าว)</label><input type="text" id="admAnnDesc"></div>
+          <div class="field"><label for="admAnnContent">เนื้อหาข่าว (แสดงในหน้ารายละเอียดข่าว ขึ้นบรรทัดใหม่ได้ ลิงก์ http/https คลิกได้อัตโนมัติ)</label><textarea id="admAnnContent" rows="6"></textarea></div>
+          <div class="photo-upload-row" style="margin-bottom:16px;">
+            <div class="slip-preview" id="newsImgPreview" style="width:160px; height:100px;"><span class="ph">ยังไม่มีรูปปก</span></div>
+            <div style="flex:1;">
+              <div class="field" style="margin-bottom:6px;"><label for="news-img">รูปปกข่าว (ถ้ามี) <span id="newsImgHint" style="font-weight:400; color:var(--ink-light);"></span></label>
+                <input type="file" id="news-img" accept="image/jpeg,image/png" onchange="handleNewsImagePick(this)"></div>
+              <label style="display:inline-flex; gap:6px; align-items:center; font-size:.88rem; margin-top:6px;"><input type="checkbox" id="admAnnPinned"> ปักหมุดข่าวนี้ไว้บนสุด</label>
+            </div>
+          </div>
+          <div class="field"><label for="admAnnLink">ลิงก์เอกสารแนบ (ถ้ามี)</label><input type="text" id="admAnnLink" placeholder="https://..."></div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-teal" id="newsSaveBtn" onclick="saveNews()">เพิ่มข่าว</button>
+            <button class="btn btn-outline" id="newsCancelBtn" onclick="resetNewsForm()" style="display:none;">ยกเลิกการแก้ไข</button>
+          </div>
+          <div id="admAnnList" style="margin-top:22px;"></div>
+        </div>
+      </div>
+
+      <!-- แท็บ: ตั้งค่าระบบ -->
+      <div class="admin-panel" id="apanel-settings">
+        <div class="card" style="padding:24px; margin-bottom:24px;">
+          <div class="sec-title">เปิด / ปิดรับสมัคร</div>
+          <div class="toggle-row">
+            <label class="switch">
+              <input type="checkbox" id="admOpenToggle" onchange="onToggleRegStatus()">
+              <span class="slider-tog"></span>
+            </label>
+            <span id="admOpenLabel" style="font-family:'Kanit'; font-weight:600;"></span>
+          </div>
+          <div class="field">
+            <label for="admPeriodMsg">ข้อความช่วงเวลารับสมัคร (แสดงตอนเปิดรับสมัคร)</label>
+            <input type="text" id="admPeriodMsg">
+          </div>
+          <div class="field">
+            <label for="admClosedMsg">ข้อความที่แสดงเมื่อปิดรับสมัคร</label>
+            <textarea id="admClosedMsg" rows="2" placeholder="เช่น ปิดรับสมัครแล้ว พิมพ์บัตรประจำตัวผู้เข้าสอบได้ตั้งแต่วันที่ ..."></textarea>
+          </div>
+          <button class="btn btn-outline" onclick="saveClosedMessage()">บันทึกข้อความ</button>
+        </div>
+
+        <div class="card" style="padding:24px; margin-bottom:24px;">
+          <div class="sec-title">ข้อมูลทั่วไปของเว็บไซต์ (แก้ไขได้โดยไม่ต้องแตะโค้ด)</div>
+          <div id="generalSettings"></div>
+          <button class="btn btn-primary" onclick="saveGeneralSettings()">บันทึกข้อมูลทั้งหมด</button>
+        </div>
+
+        <div class="card" style="padding:24px;">
+          <div class="sec-title">เปลี่ยนรหัสผ่านของฉัน</div>
+          <div class="error-msg" id="pwError"></div>
+          <div class="field-row">
+            <div class="field"><label for="pw-new">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label><input type="password" id="pw-new" autocomplete="new-password"></div>
+            <div class="field"><label for="pw-confirm">ยืนยันรหัสผ่านใหม่</label><input type="password" id="pw-confirm" autocomplete="new-password"></div>
+          </div>
+          <button class="btn btn-outline" onclick="changeAdminPassword()">เปลี่ยนรหัสผ่าน</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div>
+      <h5 data-s="site_name">SciMath Test</h5>
+      <p>การทดสอบวัดความรู้วิทยาศาสตร์-คณิตศาสตร์ ระดับประถมศึกษา จัดขึ้นเพื่อเปิดโอกาสให้นักเรียนได้ประเมินความสามารถของตนเอง และเตรียมความพร้อมสู่การศึกษาต่อในระดับมัธยมศึกษา</p>
+    </div>
+    <div>
+      <h5>เมนูลัด</h5>
+      <ul>
+        <li><a href="#register">สมัครสอบ</a></li>
+        <li><a href="#checkstatus">ตรวจสอบสถานะ</a></li>
+        <li><a href="#results">ประกาศผลสอบ</a></li>
+        <li><a href="#manual">คู่มือการใช้งาน</a></li>
+      </ul>
+    </div>
+    <div>
+      <h5>ติดต่อ</h5>
+      <ul>
+        <li>โทร. <span data-s="contact_phone"></span></li>
+        <li data-s="contact_email"></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom" id="footerBottom"></div>
+</footer>
+
+<div id="printTicketOverlay">
+  <div class="ticket-page-actions" id="ticketActions">
+    <button class="btn btn-primary" onclick="window.print()">สั่งพิมพ์บัตร</button>
+    <button class="btn btn-outline" onclick="closeTicket()">ปิด</button>
+  </div>
+  <div id="ticketContent"></div>
+</div>
+
+<div class="modal-back" id="reviewModal" onclick="if(event.target===this) closeReview()">
+  <div class="modal" id="reviewBody"></div>
+</div>
+<div class="modal-back" id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" alt="ภาพขยาย"></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/news.js"></script>
+<script src="assets/js/school.js"></script>
+<script src="assets/js/review.js"></script>
+</body>
+</html>

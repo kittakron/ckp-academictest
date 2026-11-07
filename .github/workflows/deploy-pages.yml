@@ -1,0 +1,72 @@
+name: Deploy to GitHub Pages
+
+# ทุกครั้งที่ push ขึ้น branch main เว็บจะถูกอัปเดตอัตโนมัติ (ใช้เวลาประมาณ 1 นาที)
+#
+# ตั้งค่าครั้งเดียว:
+#  1) Settings > Pages > Build and deployment > Source = "GitHub Actions"
+#  2) Settings > Secrets and variables > Actions
+#       แท็บ Variables : เพิ่ม SUPABASE_URL       (เช่น https://xxxx.supabase.co)
+#       แท็บ Secrets   : เพิ่ม SUPABASE_ANON_KEY  (anon public key)
+#     ถ้าไม่ตั้งสองค่านี้ ให้แก้ assets/js/config.js ใส่ค่าตรง ๆ แทนก็ได้
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: |
+          for f in assets/js/*.js; do node --check "$f"; done
+
+      - name: Inject Supabase settings (ถ้าตั้งค่าไว้ใน GitHub)
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            sed -i "s|https://YOUR-PROJECT.supabase.co|${SUPABASE_URL}|" assets/js/config.js
+            sed -i "s|YOUR-ANON-KEY|${SUPABASE_ANON_KEY}|" assets/js/config.js
+            echo "Injected Supabase config from GitHub settings"
+          else
+            echo "No GitHub variables set - using assets/js/config.js as committed"
+          fi
+
+      - name: Guard - refuse to publish a secret key
+        run: node .github/scripts/check-key.js
+
+      - name: Assemble site folder
+        run: |
+          mkdir _site
+          cp index.html _site/
+          cp -r assets _site/
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

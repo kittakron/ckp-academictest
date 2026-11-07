@@ -1,0 +1,8 @@
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+.vscode/
+.idea/
+# ถ้าคุณใส่คีย์จริงใน config.js ไว้เฉพาะเครื่อง ให้ใช้ไฟล์นี้แทนการ commit
+config.local.js
