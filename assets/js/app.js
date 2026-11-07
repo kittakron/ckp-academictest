@@ -49,7 +49,7 @@ function idDigits(v) { return String(v || '').replace(/\D/g, ''); }
 --------------------------------------------------------------------- */
 const DEFAULTS = {
   org_name: 'ศูนย์พัฒนาอัจฉริยภาพวิทยาศาสตร์-คณิตศาสตร์', site_name: 'SciMath Test', app_prefix: 'SM-',
-  subject_fee: '150', pass_score: '50', reg_open: '1', require_photo: '1', require_slip: '1', batch_prefix: 'SCH-', date_card: '',
+  subject_fee: '60', pass_score: '50', reg_open: '1', require_photo: '1', require_slip: '1', batch_prefix: 'SCH-', date_card: '',
   reg_closed_message: '', reg_period_display: '', results_published: '0', results_message: '',
   exam_date_iso: '', exam_date_display: '', exam_time_display: '', exam_site_name: '', exam_venue_display: '',
   date_reg: '', date_list: '', date_result: '', contact_phone: '', contact_email: '', contact_address: '', bank_info: ''
@@ -61,8 +61,8 @@ let isAdmin = false;
 let adminEmail = '';
 let applicantsCache = [];
 
-const SUBJECTS = ['วิทยาศาสตร์', 'คณิตศาสตร์'];
-const feeEach = () => Number(S.subject_fee) || 150;
+const SUBJECTS = ['คณิตศาสตร์', 'วิทยาศาสตร์', 'ภาษาไทย', 'ภาษาอังกฤษ', 'สังคมศึกษาฯ'];
+const feeEach = () => Number(S.subject_fee) || 60;
 
 /* ---------------------------------------------------------------------
    การสลับหน้า (hash routing เช่น #register, #results)
@@ -113,8 +113,6 @@ function applySettings() {
   });
   document.title = (S.site_name || 'SciMath Test') + ' — ระบบรับสมัครสอบ';
   const fee = feeEach();
-  document.querySelectorAll('.fee-tag').forEach((el) => { el.textContent = fee + ' ฿'; });
-  document.querySelectorAll('.subj-check').forEach((el) => { el.dataset.fee = fee; });
   updateFeeTotal();
   $('footerBottom').textContent = '© ' + (new Date().getFullYear() + 543) + ' ' + (S.org_name || '');
   renderStatusBanner();
@@ -155,7 +153,7 @@ function renderCountdown() {
 /* คำถามที่พบบ่อย */
 const FAQS = [
   ['สมัครสอบได้ถึงเมื่อไหร่?', 'ดูช่วงเวลารับสมัครได้ที่แถบด้านบนของเว็บไซต์และหัวข้อ "กำหนดการ" ระบบจะหยุดรับสมัครเมื่อเจ้าหน้าที่ปิดรับสมัคร'],
-  ['สมัครได้กี่วิชา?', 'สมัครได้ทั้งวิทยาศาสตร์และคณิตศาสตร์ในใบสมัครเดียวกัน ค่าธรรมเนียมคิดตามจำนวนวิชา'],
+  ['สมัครได้กี่วิชา?', 'เลือกสมัครได้ตั้งแต่ 1 ถึง 5 วิชา (คณิตศาสตร์ วิทยาศาสตร์ ภาษาไทย ภาษาอังกฤษ สังคมศึกษาฯ) ในใบสมัครเดียวกัน ค่าสมัครท่านละ 60 บาท ไม่ว่าจะเลือกกี่วิชา'],
   ['ถ้ากรอกข้อมูลผิด แก้ไขได้หรือไม่?', 'กรุณาติดต่อเจ้าหน้าที่ผ่านเมนู "ติดต่อ" พร้อมแจ้งเลขที่สมัคร เพื่อให้เจ้าหน้าที่แก้ไขข้อมูลให้'],
   ['ลืมเลขที่สมัครหรือไม่แน่ใจว่าชำระเงินแล้วหรือยัง ทำอย่างไร?', 'ไปที่เมนู "เข้าสู่ระบบ" แล้วกรอกเลขประจำตัวประชาชนและวันเดือนปีเกิดของนักเรียนที่ใช้ตอนสมัคร']
 ];
@@ -283,8 +281,8 @@ async function loadHomeStats() {
    สมัครสอบ
 --------------------------------------------------------------------- */
 function updateFeeTotal() {
-  let total = 0;
-  document.querySelectorAll('.subj-check:checked').forEach((c) => { total += Number(c.dataset.fee) || 0; });
+  // ค่าสมัครเหมาต่อคน: เลือกอย่างน้อย 1 วิชา = ท่านละ feeEach() บาท
+  const total = document.querySelectorAll('.subj-check:checked').length ? feeEach() : 0;
   $('feeTotalDisplay').textContent = total + ' ฿';
   if ($('payTotal')) $('payTotal').textContent = total + ' ฿';
 }
@@ -677,10 +675,10 @@ async function printCardFor(id) {
 function exportCSV() {
   if (!applicantsCache.length) { toast('ยังไม่มีข้อมูลผู้สมัคร', true); return; }
   const head = ['เลขที่สมัคร', 'คำนำหน้า', 'ชื่อ', 'นามสกุล', 'เลขบัตรประชาชน', 'วันเกิด', 'ระดับชั้น', 'โรงเรียน', 'วิชาที่สมัคร',
-    'ห้องสอบ', 'เลขที่นั่ง', 'ค่าธรรมเนียม', 'สถานะอนุมัติ', 'คะแนนวิทยาศาสตร์', 'คะแนนคณิตศาสตร์', 'ผู้ปกครอง', 'เบอร์โทร', 'อีเมล', 'จังหวัด', 'วันที่สมัคร'];
+    'ห้องสอบ', 'เลขที่นั่ง', 'ค่าธรรมเนียม', 'สถานะอนุมัติ', ...SUBJECTS.map((s) => 'คะแนน' + s), 'ผู้ปกครอง', 'เบอร์โทร', 'อีเมล', 'จังหวัด', 'วันที่สมัคร'];
   const score = (a, s) => { const x = (a.applicant_subjects || []).find((y) => y.subject === s); return x && x.score != null ? x.score : ''; };
   const rows = applicantsCache.map((a) => [a.app_no, a.prefix, a.first_name, a.last_name, a.id_card, a.birth_date, a.grade, a.school,
-    a.subjects.join('/'), a.exam_room || '', a.seat_no || '', a.fee, statusLabel(a.approval_status), score(a, 'วิทยาศาสตร์'), score(a, 'คณิตศาสตร์'),
+    a.subjects.join('/'), a.exam_room || '', a.seat_no || '', a.fee, statusLabel(a.approval_status), ...SUBJECTS.map((s) => score(a, s)),
     a.guardian_name, a.guardian_phone, a.email || '', a.address || '', a.submitted_at]);
   // ป้องกัน CSV/Excel formula injection: เติม ' หน้าค่าที่ขึ้นต้นด้วยอักขระอันตราย
   const cell = (v) => { let t = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
@@ -764,7 +762,7 @@ async function saveApplicantForm(evt) {
 function renderAdminResultsTable() {
   const tbody = $('admResultsBody');
   if (!applicantsCache.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-light);">ยังไม่มีผู้สมัครสอบ</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + (SUBJECTS.length + 3) + '" style="text-align:center; color:var(--ink-light);">ยังไม่มีผู้สมัครสอบ</td></tr>';
     return;
   }
   tbody.innerHTML = applicantsCache.slice(0, 500).map((a) => {
@@ -782,7 +780,7 @@ function renderAdminResultsTable() {
         '<option value="0"' + (sel === '0' ? ' selected' : '') + '>ไม่ผ่าน</option></select></div>';
     };
     return '<tr data-rid="' + Number(a.id) + '"><td class="mono">' + esc(a.app_no) + '</td><td>' + esc(a.prefix + a.first_name + ' ' + a.last_name) + '</td>' +
-      '<td>' + cell('วิทยาศาสตร์') + '</td><td>' + cell('คณิตศาสตร์') + '</td>' +
+      SUBJECTS.map((s) => '<td>' + cell(s) + '</td>').join('') +
       '<td><button class="btn btn-outline" style="padding:6px 12px; font-size:.78rem;" onclick="saveApplicantResults(' + Number(a.id) + ')">บันทึก</button></td></tr>';
   }).join('');
 }
@@ -843,7 +841,7 @@ async function saveResultsMessage() {
 /* ----- ตั้งค่าระบบ ----- */
 const SETTING_FIELDS = [
   { k: 'org_name', l: 'ชื่อหน่วยงาน' }, { k: 'site_name', l: 'ชื่อโครงการ / ระบบ' },
-  { k: 'app_prefix', l: 'คำนำหน้าเลขที่สมัคร (เช่น SM69-)' }, { k: 'subject_fee', l: 'ค่าธรรมเนียมต่อวิชา (บาท)', t: 'number' },
+  { k: 'app_prefix', l: 'คำนำหน้าเลขที่สมัคร (เช่น SM69-)' }, { k: 'subject_fee', l: 'ค่าสมัครสอบต่อท่าน (บาท)', t: 'number' },
   { k: 'pass_score', l: 'คะแนนผ่านเกณฑ์ (0–100)', t: 'number' }, { k: 'exam_date_iso', l: 'วัน-เวลาสอบ (ใช้นับถอยหลัง)', t: 'datetime' },
   { k: 'exam_date_display', l: 'วันสอบ (ข้อความที่แสดง)' }, { k: 'exam_time_display', l: 'เวลาสอบ (ข้อความที่แสดง)' },
   { k: 'exam_site_name', l: 'ชื่อสนามสอบ' }, { k: 'exam_venue_display', l: 'ข้อความห้องสอบ (เมื่อยังไม่กำหนดห้อง)' },
