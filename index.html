@@ -142,9 +142,9 @@
     <div class="wrap">
       <div class="section-head">
         <div class="kicker">วิชาที่เปิดสอบ</div>
-        <h2>เลือกสอบได้ทั้ง 5 วิชา หรือเลือกเฉพาะวิชาที่ต้องการ</h2>
+        <h2>สอบวัดความรู้ ทั้ง 5 วิชา</h2>
         <p>ข้อสอบออกแบบให้เหมาะกับระดับชั้นประถมศึกษาปีที่ 4–6 เน้นการคิดวิเคราะห์และการประยุกต์ใช้ความรู้ ไม่ใช่การท่องจำ</p>
-        <p style="margin-top:10px;"><b style="font-family:Kanit; color:var(--teal-deep);">ค่าสมัครสอบท่านละ <span data-s="subject_fee" style="font-weight:inherit">60</span> บาท</b> สมัครสอบได้ทั้ง 5 วิชาในราคาเดียว</p>
+        <p style="margin-top:10px;"><b style="font-family:Kanit; color:var(--teal-deep);">ค่าสมัครสอบท่านละ <span data-s="subject_fee" style="font-weight:inherit">60</span> บาท</b> สมัครครั้งเดียวสอบครบทั้ง 5 วิชา</p>
       </div>
       <div class="subject-grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));">
         <div class="card subject-card">
@@ -341,27 +341,11 @@
           </fieldset>
 
           <fieldset>
-            <legend>วิชาที่สมัครสอบ</legend>
-            <div class="hint" style="margin-bottom:10px;">ค่าสมัครท่านละ <b data-s="subject_fee" style="font-weight:inherit">60</b> บาท เลือกสอบกี่วิชาก็ได้ ไม่คิดเพิ่ม</div>
+            <legend>สอบวัดความรู้</legend>
             <label class="check-row">
-              <input type="checkbox" class="subj-check" value="คณิตศาสตร์" onchange="updateFeeTotal()">
-              <span class="ct"><span class="t">คณิตศาสตร์</span><br><span class="d">จำนวน เรขาคณิต การวัด สถิติ การแก้โจทย์ปัญหา</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="subj-check" value="วิทยาศาสตร์" onchange="updateFeeTotal()">
-              <span class="ct"><span class="t">วิทยาศาสตร์</span><br><span class="d">สิ่งมีชีวิต วัสดุ แรงและพลังงาน โลกและอวกาศ</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="subj-check" value="ภาษาไทย" onchange="updateFeeTotal()">
-              <span class="ct"><span class="t">ภาษาไทย</span><br><span class="d">การอ่าน การเขียน หลักภาษา วรรณคดีและวรรณกรรม</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="subj-check" value="ภาษาอังกฤษ" onchange="updateFeeTotal()">
-              <span class="ct"><span class="t">ภาษาอังกฤษ</span><br><span class="d">คำศัพท์ ไวยากรณ์ การอ่านและการสื่อสารเบื้องต้น</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="subj-check" value="สังคมศึกษาฯ" onchange="updateFeeTotal()">
-              <span class="ct"><span class="t">สังคมศึกษาฯ</span><br><span class="d">ศาสนา หน้าที่พลเมือง เศรษฐศาสตร์ ประวัติศาสตร์ ภูมิศาสตร์</span></span>
+              <input type="checkbox" class="subj-check" id="f-allsubj" value="ALL" onchange="updateFeeTotal()">
+              <span class="ct"><span class="t">สอบวัดความรู้ ทั้ง 5 วิชา</span><br><span class="d">คณิตศาสตร์ · วิทยาศาสตร์ · ภาษาไทย · ภาษาอังกฤษ · สังคมศึกษาฯ</span></span>
+              <span class="fee-tag"><span data-s="subject_fee">60</span> ฿</span>
             </label>
             <div class="fee-total"><span class="lab">ค่าธรรมเนียมรวม</span><span class="amt" id="feeTotalDisplay">0 ฿</span></div>
           </fieldset>
@@ -515,13 +499,13 @@
               <summary>วางรายชื่อจาก Excel / Google Sheets (ประหยัดเวลา)</summary>
               <p class="hint" style="margin:8px 0;">คัดลอกจากตารางที่มีคอลัมน์เรียงตามนี้ แล้ววางด้านล่าง (หนึ่งแถวต่อนักเรียน):<br>
                 <b>คำนำหน้า · ชื่อ · นามสกุล · เลขบัตรประชาชน · วันเกิด · ระดับชั้น (4, 5 หรือ 6)</b><br>
-                วันเกิดใช้รูปแบบ วว/ดด/ปปปป (พ.ศ. หรือ ค.ศ.) หรือ ปปปป-ดด-วว ระบบจะติ๊กทั้งสองวิชาให้ แก้ไขในตารางได้ภายหลัง</p>
+                วันเกิดใช้รูปแบบ วว/ดด/ปปปป (พ.ศ. หรือ ค.ศ.) หรือ ปปปป-ดด-วว ทุกคนสอบครบทั้ง 5 วิชา แนบรูปถ่ายรายคนได้ในตารางหลังนำเข้า (ย่อรูปให้อัตโนมัติ)</p>
               <textarea id="sch-paste" rows="5" placeholder="เด็กชาย&#9;สมชาย&#9;ใจดี&#9;1100200345671&#9;10/05/2559&#9;5"></textarea>
               <button type="button" class="btn btn-outline" style="margin-top:8px; padding:8px 18px; font-size:.85rem;" onclick="importPasted()">นำเข้ารายชื่อ</button>
             </details>
             <div class="table-wrap">
               <table class="stu-table">
-                <thead><tr><th>#</th><th>คำนำหน้า</th><th>ชื่อ</th><th>นามสกุล</th><th>เลขบัตรประชาชน</th><th>วันเกิด</th><th>ชั้น</th><th>วิทย์</th><th>คณิต</th><th></th></tr></thead>
+                <thead><tr><th>#</th><th>คำนำหน้า</th><th>ชื่อ</th><th>นามสกุล</th><th>เลขบัตรประชาชน</th><th>วันเกิด</th><th>ชั้น</th><th>รูปถ่าย</th><th></th></tr></thead>
                 <tbody id="schStudents"></tbody>
               </table>
             </div>

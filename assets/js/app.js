@@ -153,7 +153,7 @@ function renderCountdown() {
 /* คำถามที่พบบ่อย */
 const FAQS = [
   ['สมัครสอบได้ถึงเมื่อไหร่?', 'ดูช่วงเวลารับสมัครได้ที่แถบด้านบนของเว็บไซต์และหัวข้อ "กำหนดการ" ระบบจะหยุดรับสมัครเมื่อเจ้าหน้าที่ปิดรับสมัคร'],
-  ['สมัครได้กี่วิชา?', 'เลือกสมัครได้ตั้งแต่ 1 ถึง 5 วิชา (คณิตศาสตร์ วิทยาศาสตร์ ภาษาไทย ภาษาอังกฤษ สังคมศึกษาฯ) ในใบสมัครเดียวกัน ค่าสมัครท่านละ 60 บาท ไม่ว่าจะเลือกกี่วิชา'],
+  ['สมัครได้กี่วิชา?', 'สมัครครั้งเดียวสอบครบทั้ง 5 วิชา (คณิตศาสตร์ วิทยาศาสตร์ ภาษาไทย ภาษาอังกฤษ สังคมศึกษาฯ) ค่าสมัครท่านละ 60 บาท'],
   ['ถ้ากรอกข้อมูลผิด แก้ไขได้หรือไม่?', 'กรุณาติดต่อเจ้าหน้าที่ผ่านเมนู "ติดต่อ" พร้อมแจ้งเลขที่สมัคร เพื่อให้เจ้าหน้าที่แก้ไขข้อมูลให้'],
   ['ลืมเลขที่สมัครหรือไม่แน่ใจว่าชำระเงินแล้วหรือยัง ทำอย่างไร?', 'ไปที่เมนู "เข้าสู่ระบบ" แล้วกรอกเลขประจำตัวประชาชนและวันเดือนปีเกิดของนักเรียนที่ใช้ตอนสมัคร']
 ];
@@ -291,11 +291,11 @@ async function submitRegistration(evt) {
   evt.preventDefault();
   clearErr('regError');
   const idcard = idDigits($('f-idcard').value);
-  const subjects = Array.from(document.querySelectorAll('.subj-check:checked')).map((c) => c.value);
+  const subjects = document.querySelector('.subj-check:checked') ? SUBJECTS.slice() : []; // ติ๊กเดียว = สอบครบทั้ง 5 วิชา
 
   if (S.reg_open !== '1') { showErr('regError', 'ขณะนี้ปิดรับสมัครสอบแล้ว'); return false; }
   if (!/^\d{13}$/.test(idcard)) { showErr('regError', 'เลขประจำตัวประชาชนต้องเป็นตัวเลข 13 หลัก'); return false; }
-  if (!subjects.length) { showErr('regError', 'กรุณาเลือกวิชาที่ต้องการสมัครสอบอย่างน้อย 1 วิชา'); return false; }
+  if (!subjects.length) { showErr('regError', 'กรุณาติ๊กเลือก "สอบวัดความรู้ ทั้ง 5 วิชา" เพื่อสมัครสอบ'); return false; }
   if (S.require_photo === '1' && !regPhoto) { showErr('regError', 'กรุณาอัปโหลดรูปถ่ายติดบัตรของนักเรียน'); return false; }
   if (S.require_slip === '1' && !slipData.reg) { showErr('regError', 'กรุณาแนบสลิปการชำระเงิน'); return false; }
 

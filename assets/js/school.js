@@ -19,8 +19,9 @@ function studentRowHtml() {
     '<td><input type="text" class="sr-id idc" inputmode="numeric" maxlength="17"></td>' +
     '<td><input type="date" class="sr-birth"></td>' +
     '<td><select class="sr-grade">' + GRADES.map((g, i) => '<option value="' + g + '">ป.' + (i + 4) + '</option>').join('') + '</select></td>' +
-    '<td><input type="checkbox" class="sr-sci" checked aria-label="วิทยาศาสตร์"></td>' +
-    '<td><input type="checkbox" class="sr-math" checked aria-label="คณิตศาสตร์"></td>' +
+    '<td><div style="display:flex; gap:6px; align-items:center;"><div class="sr-thumb"><div class="mini-photo-empty"></div></div>' +
+    '<span class="file-btn btn btn-outline" style="padding:5px 12px; font-size:.75rem;"><span class="sr-photo-label">เลือกรูป</span>' +
+    '<input type="file" accept="image/jpeg,image/png" onchange="schoolRowPhoto(this)"></span></div></td>' +
     '<td><button type="button" class="btn btn-danger" onclick="removeStudentRow(this)" aria-label="ลบแถว">×</button></td></tr>';
 }
 function renumberRows() {
@@ -38,11 +39,21 @@ function addStudentRow(d) {
     tr.querySelector('.sr-id').value = d.id || '';
     tr.querySelector('.sr-birth').value = d.birth || '';
     if (d.grade) tr.querySelector('.sr-grade').value = d.grade;
-    tr.querySelector('.sr-sci').checked = d.sci !== false;
-    tr.querySelector('.sr-math').checked = d.math !== false;
   }
   renumberRows();
   return tr;
+}
+// อัปโหลดรูปถ่ายนักเรียนรายแถว (ย่อรูปในเบราว์เซอร์ก่อนส่ง เหมือนการสมัครรายบุคคล)
+async function schoolRowPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const tr = input.closest('tr');
+  try {
+    const p = await compressImage(input.files[0]);
+    tr._photo = p;
+    tr.querySelector('.sr-thumb').innerHTML = '<img class="mini-photo" src="' + p.thumb + '" alt="">';
+    tr.querySelector('.sr-photo-label').textContent = 'เปลี่ยนรูป';
+    updateSchoolTotal();
+  } catch (err) { toast(err.message, true); input.value = ''; }
 }
 function removeStudentRow(btn) {
   const rows = document.querySelectorAll('#schStudents .stu-row');
@@ -55,10 +66,10 @@ function rowIsEmpty(tr) {
 }
 function updateSchoolTotal() {
   const rows = Array.from(document.querySelectorAll('#schStudents .stu-row')).filter((tr) => !rowIsEmpty(tr));
-  let subj = 0;
-  rows.forEach((tr) => { subj += (tr.querySelector('.sr-sci').checked ? 1 : 0) + (tr.querySelector('.sr-math').checked ? 1 : 0); });
-  if ($('schTotal')) $('schTotal').textContent = (subj * feeEach()) + ' ฿';
-  if ($('schCount')) $('schCount').textContent = 'นักเรียน ' + rows.length + ' คน · ' + subj + ' วิชา';
+  const withPhoto = rows.filter((tr) => tr._photo).length;
+  // ค่าสมัครเหมาท่านละ feeEach() บาท (สอบครบ 5 วิชา)
+  if ($('schTotal')) $('schTotal').textContent = (rows.length * feeEach()) + ' ฿';
+  if ($('schCount')) $('schCount').textContent = 'นักเรียน ' + rows.length + ' คน · แนบรูปแล้ว ' + withPhoto + ' คน';
 }
 
 /* ---------------------------------------------------------------------
@@ -146,10 +157,10 @@ async function submitSchool(evt) {
     const o = {
       prefix: tr.querySelector('.sr-prefix').value, first_name: tr.querySelector('.sr-first').value.trim(),
       last_name: tr.querySelector('.sr-last').value.trim(), id_card: idDigits(tr.querySelector('.sr-id').value),
-      birth_date: tr.querySelector('.sr-birth').value, grade: tr.querySelector('.sr-grade').value, subjects: []
+      birth_date: tr.querySelector('.sr-birth').value, grade: tr.querySelector('.sr-grade').value,
+      subjects: SUBJECTS.slice(),   // สมัครครั้งเดียวสอบครบทั้ง 5 วิชา
+      photo_data: tr._photo ? tr._photo.full : null, thumb_data: tr._photo ? tr._photo.thumb : null
     };
-    if (tr.querySelector('.sr-sci').checked) o.subjects.push('วิทยาศาสตร์');
-    if (tr.querySelector('.sr-math').checked) o.subjects.push('คณิตศาสตร์');
     const fail = (m) => { showErr('schError', 'แถวที่ ' + n + ' : ' + m); tr.scrollIntoView({ block: 'center' }); };
     if (!o.prefix) { fail('กรุณาเลือกคำนำหน้า'); return false; }
     if (!o.first_name || !o.last_name) { fail('กรุณากรอกชื่อและนามสกุล'); return false; }
@@ -157,7 +168,6 @@ async function submitSchool(evt) {
     if (seen[o.id_card]) { fail('เลขประจำตัวประชาชนซ้ำกับแถวที่ ' + seen[o.id_card]); return false; }
     seen[o.id_card] = n;
     if (!o.birth_date) { fail('กรุณาระบุวันเกิดให้ถูกต้อง'); return false; }
-    if (!o.subjects.length) { fail('กรุณาเลือกวิชาอย่างน้อย 1 วิชา'); return false; }
     students.push(o);
     schoolRowMap.push(n);
   }
@@ -187,7 +197,7 @@ function renderSchoolSuccess(r, tid, phone) {
     '<div class="row"><span>ยอดรวมค่าสมัคร</span><span>' + esc(r.total_fee) + ' บาท</span></div>' +
     '<div class="row"><span>สถานะ</span><span>' + approvalBadge('pending') + '</span></div></div>' +
     '<div class="note-box info" style="margin-top:16px;">ขั้นตอนต่อไป: ' + (slipData.school ? 'รอเจ้าหน้าที่ตรวจสอบสลิป ' : 'โอนเงินและแนบสลิปที่เมนู "ครูที่ปรึกษา" ') +
-    '· อัปโหลดรูปถ่ายนักเรียนแต่ละคนที่เมนู "ครูที่ปรึกษา" (ใช้เลขบัตรครู + เบอร์โทรที่กรอกไว้เข้าสู่ระบบ) · เมื่ออนุมัติแล้วพิมพ์บัตรทั้งกลุ่มได้ในที่เดียว</div>' +
+    '· หากยังไม่ได้แนบรูปถ่ายนักเรียนบางคน อัปโหลดเพิ่มได้ที่เมนู "ครูที่ปรึกษา" (ใช้เลขบัตรครู + เบอร์โทรที่กรอกไว้เข้าสู่ระบบ) · เมื่ออนุมัติแล้วพิมพ์บัตรทั้งกลุ่มได้ในที่เดียว</div>' +
     '<div class="table-wrap" style="margin-top:16px; text-align:left;"><table><thead><tr><th>เลขที่สมัคร</th><th>ชื่อ-นามสกุล</th><th>ชั้น</th><th>วิชา</th></tr></thead><tbody>' +
     (r.students || []).map((s) => '<tr><td class="mono">' + esc(s.app_no) + '</td><td>' + esc(s.name) + '</td><td>' + esc(s.grade) + '</td><td>' + esc((s.subjects || []).join(', ')) + '</td></tr>').join('') +
     '</tbody></table></div>' +
