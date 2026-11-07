@@ -11,6 +11,6 @@
 // GitHub repo > Settings > Secrets and variables > Actions แทนได้ (ดู README)
 // =====================================================================
 window.APP_CONFIG = {
-  SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR-ANON-KEY"
+  SUPABASE_URL: 'https://hnwntrfaywlxlcjjqyck.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_9q_0f876VxmuMj9Dz2uSsg_qKxr9z9B',
 };
