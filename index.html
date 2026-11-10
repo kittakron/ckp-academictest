@@ -47,6 +47,43 @@
   .admin-toolbar>div:last-child .btn{flex:1 1 calc(50% - 10px);padding:0 10px}
 }
 </style>
+<style id="new-ui">
+/* ===== ผลสอบ / อันดับ / ตั้งค่าวิชา / โลโก้ / ตัดรูป ===== */
+.total-box{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 20px;margin-top:16px;border-radius:14px;background:#16213E;color:#fff}
+.total-box .tb-lab{font:600 .9rem 'Kanit',sans-serif;opacity:.85}
+.total-box .tb-val{font:700 1.9rem 'JetBrains Mono',monospace}
+.total-box .tb-val span{font-size:.95rem;opacity:.7;font-weight:500}
+.total-box .tb-pct{font:700 1.1rem 'JetBrains Mono',monospace;color:#F5A623}
+.rank-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.rank-tile{padding:14px;border:1px solid #E6E0D2;border-radius:14px;background:#FDFBF6;text-align:center}
+.rank-tile .rt-title{font:600 .82rem 'Kanit',sans-serif;color:#5B6B8C}
+.rank-tile .rt-rank{font:700 1.7rem 'JetBrains Mono',monospace;color:#16213E;margin:4px 0}
+.rank-tile .rt-sub{font-size:.8rem;color:#5B6B8C}
+.award-box{margin-top:14px;padding:16px;border-radius:14px;border:1.5px dashed #E1DACB;text-align:center;background:#FDFBF6}
+.award-box.has{border:1.5px solid #F5A623;background:#FFF7E6}
+.award-box .ab-lab{font:600 .8rem 'Kanit',sans-serif;color:#5B6B8C}
+.award-box .ab-name{font:700 1.3rem 'Kanit',sans-serif;color:#16213E;margin-top:2px}
+.award-box .ab-detail{font-size:.88rem;color:#5B6B8C;margin-top:4px}
+.rule-row{display:grid;grid-template-columns:32px 1.2fr .9fr .9fr .9fr 1.4fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.rule-row.subj-row{grid-template-columns:32px 1fr 1fr 1fr 1fr auto}
+.rule-row input{height:42px;padding:0 12px;border:1.5px solid #E1DACB;border-radius:10px;background:#FDFBF6;font:500 .88rem 'Sarabun','Kanit',sans-serif;min-width:0;width:100%}
+.rule-row input:focus{outline:none;border-color:#1F9C87;box-shadow:0 0 0 3px rgba(31,156,135,.18);background:#fff}
+.rule-no{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#16213E;color:#fff;font:700 .78rem 'JetBrains Mono',monospace}
+.rule-btns{display:flex;gap:6px}
+.rule-btns .btn{padding:0;width:36px;height:36px;justify-content:center;font-size:.95rem}
+@media(max-width:900px){.rule-row,.rule-row.subj-row{grid-template-columns:32px 1fr 1fr}.rule-row input{grid-column:auto}.rule-btns{grid-column:1/-1;justify-content:flex-end}.rule-row.subj-row .sj-desc{grid-column:1/-1!important}}
+.logo-box{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.logo-preview,.cover-preview{width:120px;height:120px;border:1.5px dashed #E1DACB;border-radius:16px;background:#FDFBF6;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;font-size:.78rem;color:#5B6B8C}
+.logo-preview img{max-width:100%;max-height:100%;object-fit:contain}
+.fee-mode{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:12px 0 4px}
+.fee-mode label.opt{display:flex;flex-direction:column;gap:8px;padding:14px;border:1.5px solid #E1DACB;border-radius:14px;background:#FDFBF6;cursor:pointer}
+.fee-mode label.opt:has(input:checked){border-color:#1F9C87;background:#E8F5F2}
+.fee-mode .opt-head{display:flex;gap:8px;align-items:center;font:600 .95rem 'Kanit',sans-serif}
+.fee-mode input[type=number]{height:42px;padding:0 12px;border:1.5px solid #E1DACB;border-radius:10px;font:500 .95rem 'JetBrains Mono',monospace;width:100%;background:#fff}
+#cropCanvas{display:block;margin:0 auto;border-radius:12px;border:1px solid #E1DACB;background:#fff;touch-action:none;cursor:grab;max-width:100%;height:auto}
+#cropCanvas:active{cursor:grabbing}
+#cropZoom{width:100%;margin:14px 0 4px}
+</style>
 </head>
 <body>
 
@@ -458,6 +495,7 @@
       </div>
       <div id="resultsOutput" class="status-card"></div>
     </div>
+    <div class="wrap"><div id="leaderboardBox"></div></div>
   </section>
 </section>
 
@@ -898,6 +936,46 @@
             </table>
           </div>
         </div>
+
+        <div class="card" style="padding:24px; margin-top:24px;">
+          <div class="sec-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span>อันดับและสิทธิ์ที่ได้รับ</span>
+            <span style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn btn-outline" style="padding:8px 16px; font-size:.85rem;" onclick="loadRankings()">รีเฟรชอันดับ</button>
+              <button class="btn btn-teal" style="padding:8px 16px; font-size:.85rem;" onclick="downloadRankingCsv()">ดาวน์โหลด CSV</button>
+            </span>
+          </div>
+          <p id="rankSummary" style="color:var(--ink-light); font-size:.88rem; margin-bottom:12px;"></p>
+          <div class="admin-toolbar" style="padding:0; border:0; margin-bottom:12px;">
+            <div class="left">
+              <input type="text" id="rankSearch" placeholder="ค้นหาชื่อ / เลขที่สมัคร / โรงเรียน" oninput="renderRankings()">
+              <select id="rankGrade" onchange="renderRankings()"><option value="">ทุกระดับชั้น</option></select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>อันดับรวม</th><th>อันดับในชั้น</th><th>เลขที่สมัคร</th><th>ชื่อ-นามสกุล</th><th>ระดับชั้น</th><th>คะแนนรวม</th><th>ร้อยละ</th><th>สิทธิ์ที่ได้รับ</th></tr></thead>
+              <tbody id="admRankBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="padding:24px; margin-top:24px;">
+          <div class="sec-title">เกณฑ์ผลสอบและสิทธิ์ที่ได้รับ</div>
+          <div class="field-row">
+            <div class="field"><label for="setSubjectMax">คะแนนเต็มต่อวิชา</label><input type="number" id="setSubjectMax" min="1" value="100"></div>
+            <div class="field"><label for="setPassScore">เกณฑ์ผ่านรายวิชา (%)</label><input type="number" id="setPassScore" min="0" max="100" value="50"></div>
+          </div>
+          <div class="hint" style="margin:6px 0;">เกณฑ์สิทธิ์ (ตรวจจากบนลงล่าง ได้ข้อแรกที่ผู้เข้าสอบเข้าเงื่อนไข) ปล่อยช่องว่างไว้ = ไม่ใช้เงื่อนไขนั้น</div>
+          <div id="rulesEditor"></div>
+          <button type="button" class="btn btn-outline" style="margin:6px 0 18px;" onclick="addRule()">+ เพิ่มเกณฑ์</button>
+          <div class="toggle-row">
+            <label class="switch"><input type="checkbox" id="setShowTop"><span class="slider-tog"></span></label>
+            <span style="font-family:'Kanit'; font-weight:600;">แสดงอันดับสูงสุดของแต่ละระดับชั้นบนหน้าประกาศผล</span>
+          </div>
+          <div class="field" style="max-width:260px;"><label for="setTopN">แสดงกี่อันดับต่อระดับชั้น (1–50)</label><input type="number" id="setTopN" min="1" max="50" value="10"></div>
+          <button class="btn btn-primary" onclick="saveRulesConfig()">บันทึกเกณฑ์</button>
+        </div>
       </div>
 
       <!-- แท็บ: ข่าวสาร -->
@@ -945,6 +1023,38 @@
             <textarea id="admClosedMsg" rows="2" placeholder="เช่น ปิดรับสมัครแล้ว พิมพ์บัตรประจำตัวผู้เข้าสอบได้ตั้งแต่วันที่ ..."></textarea>
           </div>
           <button class="btn btn-outline" onclick="saveClosedMessage()">บันทึกข้อความ</button>
+        </div>
+
+        <div class="card" style="padding:24px; margin-bottom:24px;">
+          <div class="sec-title">โลโก้และชื่อหน่วยงาน</div>
+          <div class="logo-box">
+            <div class="logo-preview" id="logoPreview"><span class="ph">ยังไม่มีโลโก้</span></div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <span class="file-btn btn btn-teal">อัปโหลดโลโก้<input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleLogoPick(this)"></span>
+              <button type="button" class="btn btn-outline" onclick="removeLogo()">ลบโลโก้</button>
+            </div>
+          </div>
+          <div class="field"><label for="brandOrg">ชื่อหน่วยงาน</label><input type="text" id="brandOrg"></div>
+          <div class="field-row">
+            <div class="field"><label for="brandSite">ชื่อโครงการ</label><input type="text" id="brandSite"></div>
+            <div class="field"><label for="brandTagline">คำบรรยายใต้ชื่อ</label><input type="text" id="brandTagline"></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveBranding()">บันทึกชื่อ</button>
+        </div>
+
+        <div class="card" style="padding:24px; margin-bottom:24px;">
+          <div class="sec-title">วิชาที่เปิดสอบและค่าสมัคร</div>
+          <div class="hint" style="margin-bottom:10px;">ตั้งชื่อวิชา คำอธิบาย และลำดับได้เอง ควรตั้งก่อนเปิดรับสมัคร</div>
+          <div id="subjectsEditor"></div>
+          <button type="button" class="btn btn-outline" style="margin:6px 0 18px;" onclick="addSubject()">+ เพิ่มวิชา</button>
+          <div class="hint">วิธีคิดค่าสมัคร</div>
+          <div class="fee-mode">
+            <label class="opt"><span class="opt-head"><input type="radio" name="feeMode" value="flat" checked> เหมาจ่ายต่อท่าน</span>
+              <input type="number" id="setFeeFlat" min="0" value="60" aria-label="ค่าสมัครเหมาต่อท่าน (บาท)"><span class="hint">บาทต่อท่าน (สมัครกี่วิชาก็ราคาเดียว)</span></label>
+            <label class="opt"><span class="opt-head"><input type="radio" name="feeMode" value="each"> คิดตามจำนวนวิชา</span>
+              <input type="number" id="setFeeEach" min="0" value="60" aria-label="ค่าสมัครต่อวิชา (บาท)"><span class="hint">บาทต่อวิชา</span></label>
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px;" onclick="saveSubjectsConfig()">บันทึกวิชาและค่าสมัคร</button>
         </div>
 
         <div class="card" style="padding:24px; margin-bottom:24px;">
@@ -1006,6 +1116,18 @@
 <div class="modal-back" id="reviewModal" onclick="if(event.target===this) closeReview()">
   <div class="modal" id="reviewBody"></div>
 </div>
+<div class="modal-back" id="cropModal">
+  <div class="modal" style="max-width:340px; text-align:center;">
+    <h3>ปรับรูปถ่ายติดบัตร</h3>
+    <p class="hint" style="margin:4px 0 12px;">ลากรูปเพื่อจัดตำแหน่งใบหน้า และเลื่อนแถบเพื่อซูม (สัดส่วน 3:4)</p>
+    <canvas id="cropCanvas" width="270" height="360"></canvas>
+    <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1" aria-label="ซูมรูป">
+    <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
+      <button type="button" class="btn btn-outline" onclick="cancelCrop()">ยกเลิก</button>
+      <button type="button" class="btn btn-teal" onclick="confirmCrop()">ใช้รูปนี้</button>
+    </div>
+  </div>
+</div>
 <div class="modal-back" id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" alt="ภาพขยาย"></div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -1014,8 +1136,11 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="assets/js/media.js"></script>
 <script src="assets/js/news.js"></script>
 <script src="assets/js/school.js"></script>
 <script src="assets/js/review.js"></script>
+<script src="assets/js/results.js"></script>
+<script src="assets/js/settings.js"></script>
 </body>
 </html>
