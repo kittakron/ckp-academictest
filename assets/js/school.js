@@ -67,8 +67,8 @@ function rowIsEmpty(tr) {
 function updateSchoolTotal() {
   const rows = Array.from(document.querySelectorAll('#schStudents .stu-row')).filter((tr) => !rowIsEmpty(tr));
   const withPhoto = rows.filter((tr) => tr._photo).length;
-  // ค่าสมัครเหมาท่านละ feeEach() บาท (สอบครบ 5 วิชา)
-  if ($('schTotal')) $('schTotal').textContent = (rows.length * feeEach()) + ' ฿';
+  // ค่าสมัครต่อคนตามวิธีคิดใน ตั้งค่าระบบ (เหมาต่อท่าน หรือตามจำนวนวิชา)
+  if ($('schTotal')) $('schTotal').textContent = (rows.length * feeFor(getSubjects().length)) + ' ฿';
   if ($('schCount')) $('schCount').textContent = 'นักเรียน ' + rows.length + ' คน · แนบรูปแล้ว ' + withPhoto + ' คน';
 }
 
@@ -158,7 +158,7 @@ async function submitSchool(evt) {
       prefix: tr.querySelector('.sr-prefix').value, first_name: tr.querySelector('.sr-first').value.trim(),
       last_name: tr.querySelector('.sr-last').value.trim(), id_card: idDigits(tr.querySelector('.sr-id').value),
       birth_date: tr.querySelector('.sr-birth').value, grade: tr.querySelector('.sr-grade').value,
-      subjects: SUBJECTS.slice(),   // สมัครครั้งเดียวสอบครบทั้ง 5 วิชา
+      subjects: getSubjects(),   // สมัครครั้งเดียวสอบครบทุกวิชาที่เปิดสอบ
       photo_data: tr._photo ? tr._photo.full : null, thumb_data: tr._photo ? tr._photo.thumb : null
     };
     const fail = (m) => { showErr('schError', 'แถวที่ ' + n + ' : ' + m); tr.scrollIntoView({ block: 'center' }); };

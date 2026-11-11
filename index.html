@@ -48,6 +48,14 @@
 }
 </style>
 <style id="new-ui">
+/* ===== สำรอง: หน้าต่างซ้อน/ภาพขยาย/แจ้งเตือน (กันกรณี style.css เป็นรุ่นเก่า) ===== */
+.modal-back{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(11,18,38,.6);z-index:200;overflow:auto}
+.modal-back.show{display:flex}
+.modal-back>.modal{background:#fff;border-radius:18px;padding:22px;width:100%;max-width:720px;max-height:92vh;overflow:auto}
+#lightboxImg{max-width:94vw;max-height:92vh;border-radius:10px;background:#fff}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);max-width:92vw;padding:12px 22px;border-radius:12px;background:#16213E;color:#fff;font:600 .92rem 'Sarabun','Kanit',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:300;display:none}
+#toast.show{display:block}
+#toast.err{background:#B23A2A}
 /* ===== ผลสอบ / อันดับ / ตั้งค่าวิชา / โลโก้ / ตัดรูป ===== */
 .total-box{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 20px;margin-top:16px;border-radius:14px;background:#16213E;color:#fff}
 .total-box .tb-lab{font:600 .9rem 'Kanit',sans-serif;opacity:.85}
@@ -101,7 +109,7 @@
       </svg>
       <span class="brand-text">
         <div class="name" data-s="org_name">ศูนย์พัฒนาอัจฉริยภาพวิทยาศาสตร์-คณิตศาสตร์</div>
-        <div class="sub"><span data-s="site_name">SciMath Test</span> — ระบบรับสมัครสอบวัดความรู้ ระดับประถมศึกษา</div>
+        <div class="sub"><span data-s="site_name">SciMath Test</span><span id="brandTag"> — ระบบรับสมัครสอบวัดความรู้ ระดับประถมศึกษา</span></div>
       </span>
     </button>
     <button class="hamburger" onclick="toggleMenu()" aria-label="เปิดเมนู">
@@ -132,7 +140,7 @@
       <div>
         <div class="eyebrow">เปิดรับสมัคร ปีการศึกษา 2569</div>
         <h1>ค้นพบนักวิทย์-นักคิดตัวน้อย<br>ใน<span class="accent" data-s="site_name">SciMath Test</span></h1>
-        <p class="lede">การทดสอบวัดความรู้ 5 วิชา (คณิตศาสตร์ วิทยาศาสตร์ ภาษาไทย ภาษาอังกฤษ สังคมศึกษาฯ) สำหรับนักเรียนระดับประถมศึกษาปีที่ 4–6 เปิดโอกาสให้เด็ก ๆ ได้วัดระดับความสามารถ พร้อมใบประกาศนียบัตรสำหรับผู้เข้าสอบทุกคน</p>
+        <p class="lede">การทดสอบวัดความรู้หลายวิชา สำหรับนักเรียนระดับประถมศึกษาปีที่ 4–6 เปิดโอกาสให้เด็ก ๆ ได้วัดระดับความสามารถ พร้อมใบประกาศนียบัตรสำหรับผู้เข้าสอบทุกคน</p>
         <div class="hero-cta">
           <button class="btn btn-primary" onclick="go('register')">สมัครสอบตอนนี้</button>
           <button class="btn btn-outline" onclick="go('manual')">ดูขั้นตอนการสมัคร</button>
@@ -207,37 +215,11 @@
     <div class="wrap">
       <div class="section-head">
         <div class="kicker">วิชาที่เปิดสอบ</div>
-        <h2>สอบวัดความรู้ ทั้ง 5 วิชา</h2>
+        <h2><span id="subjHeading">สอบวัดความรู้ ทั้ง 5 วิชา</span></h2>
         <p>ข้อสอบออกแบบให้เหมาะกับระดับชั้นประถมศึกษาปีที่ 4–6 เน้นการคิดวิเคราะห์และการประยุกต์ใช้ความรู้ ไม่ใช่การท่องจำ</p>
-        <p style="margin-top:10px;"><b style="font-family:Kanit; color:var(--teal-deep);">ค่าสมัครสอบท่านละ <span data-s="subject_fee" style="font-weight:inherit">60</span> บาท</b> สมัครครั้งเดียวสอบครบทั้ง 5 วิชา</p>
+        <p style="margin-top:10px;"><b id="feeSummary" style="font-family:Kanit; color:var(--teal-deep);">ค่าสมัครสอบท่านละ 60 บาท</b></p>
       </div>
-      <div class="subject-grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));">
-        <div class="card subject-card">
-          <svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="#E85C4A" opacity=".12"/><path d="M13 13h18M13 31h18M17 13l10 18M27 13 17 31" stroke="#E85C4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <h3>คณิตศาสตร์</h3>
-          <p>ครอบคลุมจำนวนและการดำเนินการ เรขาคณิต การวัด สถิติเบื้องต้น และการแก้โจทย์ปัญหา</p>
-        </div>
-        <div class="card subject-card">
-          <svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="#1F9C87" opacity=".12"/><path d="M17 10h10M19 10v7l-6 12a3 3 0 0 0 2.7 4.3h12.6A3 3 0 0 0 31 29l-6-12v-7" stroke="#1F9C87" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <h3>วิทยาศาสตร์</h3>
-          <p>ครอบคลุมสิ่งมีชีวิต วัสดุและสาร แรงและพลังงาน โลกและอวกาศ ตามมาตรฐานหลักสูตรระดับประถมศึกษา</p>
-        </div>
-        <div class="card subject-card">
-          <svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="#F5A623" opacity=".12"/><path d="M14 12h16M22 12v20M14 32c3 0 5-2 8-2s5 2 8 2" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <h3>ภาษาไทย</h3>
-          <p>ครอบคลุมการอ่านจับใจความ การเขียน หลักการใช้ภาษา และวรรณคดีวรรณกรรมไทยตามหลักสูตรระดับประถมศึกษา</p>
-        </div>
-        <div class="card subject-card">
-          <svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="#4A7BE8" opacity=".12"/><path d="M12 31l7-18 7 18M14.5 26h9M30 13v18" stroke="#4A7BE8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <h3>ภาษาอังกฤษ</h3>
-          <p>ครอบคลุมคำศัพท์ ไวยากรณ์พื้นฐาน การอ่านจับใจความ และการสื่อสารในชีวิตประจำวัน</p>
-        </div>
-        <div class="card subject-card">
-          <svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="#8E5BD6" opacity=".12"/><path d="M22 11a11 11 0 1 0 0 22 11 11 0 0 0 0-22zM11 22h22M22 11c-4 4-4 18 0 22M22 11c4 4 4 18 0 22" stroke="#8E5BD6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <h3>สังคมศึกษาฯ</h3>
-          <p>ครอบคลุมศาสนา ศีลธรรม หน้าที่พลเมือง เศรษฐศาสตร์ ประวัติศาสตร์ และภูมิศาสตร์ตามหลักสูตรระดับประถมศึกษา</p>
-        </div>
-      </div>
+      <div class="subject-grid" id="subjectGrid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));"></div>
     </div>
   </section>
 
@@ -407,11 +389,7 @@
 
           <fieldset>
             <legend>สอบวัดความรู้</legend>
-            <label class="check-row">
-              <input type="checkbox" class="subj-check" id="f-allsubj" value="ALL" onchange="updateFeeTotal()">
-              <span class="ct"><span class="t">สอบวัดความรู้ ทั้ง 5 วิชา</span><br><span class="d">คณิตศาสตร์ · วิทยาศาสตร์ · ภาษาไทย · ภาษาอังกฤษ · สังคมศึกษาฯ</span></span>
-              <span class="fee-tag"><span data-s="subject_fee">60</span> ฿</span>
-            </label>
+            <div id="regSubjectBox"></div>
             <div class="fee-total"><span class="lab">ค่าธรรมเนียมรวม</span><span class="amt" id="feeTotalDisplay">0 ฿</span></div>
           </fieldset>
 
@@ -750,26 +728,7 @@
 
           <fieldset>
             <legend>วิชาที่สมัครสอบ</legend>
-            <label class="check-row">
-              <input type="checkbox" class="af-subj" value="คณิตศาสตร์">
-              <span class="ct"><span class="t">คณิตศาสตร์</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="af-subj" value="วิทยาศาสตร์">
-              <span class="ct"><span class="t">วิทยาศาสตร์</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="af-subj" value="ภาษาไทย">
-              <span class="ct"><span class="t">ภาษาไทย</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="af-subj" value="ภาษาอังกฤษ">
-              <span class="ct"><span class="t">ภาษาอังกฤษ</span></span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" class="af-subj" value="สังคมศึกษาฯ">
-              <span class="ct"><span class="t">สังคมศึกษาฯ</span></span>
-            </label>
+            <div id="afSubjects"></div>
             <div class="hint">หมายเหตุ: หากเอาเครื่องหมายถูกออกจากวิชาใด คะแนนของวิชานั้นที่บันทึกไว้จะถูกลบไปด้วย</div>
           </fieldset>
 
@@ -855,14 +814,7 @@
         <div class="admin-toolbar">
           <div class="left">
             <input type="text" id="admSearch" placeholder="ค้นหาชื่อ / เลขบัตร / โรงเรียน" oninput="renderAdminTable()">
-            <select id="admSubjFilter" onchange="renderAdminTable()">
-              <option value="">ทุกวิชา</option>
-              <option value="คณิตศาสตร์">คณิตศาสตร์</option>
-              <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
-              <option value="ภาษาไทย">ภาษาไทย</option>
-              <option value="ภาษาอังกฤษ">ภาษาอังกฤษ</option>
-              <option value="สังคมศึกษาฯ">สังคมศึกษาฯ</option>
-            </select>
+            <select id="admSubjFilter" onchange="renderAdminTable()"><option value="">ทุกวิชา</option></select>
             <select id="admPayFilter" onchange="renderAdminTable()">
               <option value="">ทุกสถานะ</option>
               <option value="pending">รอตรวจสอบ</option>
@@ -931,7 +883,7 @@
           <p style="color:var(--ink-light); font-size:.85rem; margin-bottom:14px;">พิมพ์คะแนน (0–100) ระบบจะเลือก ผ่าน/ไม่ผ่าน ให้อัตโนมัติตามคะแนนผ่านเกณฑ์ (ตั้งค่าได้ที่แท็บ "ตั้งค่าระบบ") แก้ไขเองได้ จากนั้นกด "บันทึก" รายแถว หรือ "บันทึกทั้งหมด"</p>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>เลขที่สมัคร</th><th>ชื่อ-นามสกุล</th><th>คณิตศาสตร์</th><th>วิทยาศาสตร์</th><th>ภาษาไทย</th><th>ภาษาอังกฤษ</th><th>สังคมศึกษาฯ</th><th></th></tr></thead>
+              <thead id="admResultsHead"></thead>
               <tbody id="admResultsBody"></tbody>
             </table>
           </div>

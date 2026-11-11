@@ -52,7 +52,9 @@ const DEFAULTS = {
   subject_fee: '60', pass_score: '50', reg_open: '1', require_photo: '1', require_slip: '1', batch_prefix: 'SCH-', date_card: '',
   reg_closed_message: '', reg_period_display: '', results_published: '0', results_message: '',
   exam_date_iso: '', exam_date_display: '', exam_time_display: '', exam_site_name: '', exam_venue_display: '',
-  date_reg: '', date_list: '', date_result: '', contact_phone: '', contact_email: '', contact_address: '', bank_info: ''
+  date_reg: '', date_list: '', date_result: '', contact_phone: '', contact_email: '', contact_address: '', bank_info: '',
+  subjects: '', subject_desc: '{}', fee_mode: 'flat', fee_flat: '60', subject_max: '100', award_rules: '[]',
+  results_show_top: '0', results_top_n: '10', site_tagline: 'ระบบรับสมัครสอบวัดความรู้ ระดับประถมศึกษา', logo_data: ''
 };
 let S = Object.assign({}, DEFAULTS);   // settings
 let currentStudent = null;             // ผู้สมัครที่ล็อกอินอยู่ (เก็บในหน่วยความจำเท่านั้น)
@@ -61,8 +63,26 @@ let isAdmin = false;
 let adminEmail = '';
 let applicantsCache = [];
 
-const SUBJECTS = ['คณิตศาสตร์', 'วิทยาศาสตร์', 'ภาษาไทย', 'ภาษาอังกฤษ', 'สังคมศึกษาฯ'];
-const feeEach = () => Number(S.subject_fee) || 60;
+const DEFAULT_SUBJECTS = ['คณิตศาสตร์', 'วิทยาศาสตร์', 'ภาษาไทย', 'ภาษาอังกฤษ', 'สังคมศึกษาฯ'];
+// รายชื่อวิชาที่เปิดสอบ (ตั้งได้ที่ เจ้าหน้าที่ > ตั้งค่าระบบ) — ถ้ายังไม่เคยตั้ง ใช้ 5 วิชาเริ่มต้น
+function getSubjects() {
+  try { const a = JSON.parse(S.subjects); if (Array.isArray(a) && a.length) return a.map(String); } catch (e) { /* ใช้ค่าเริ่มต้น */ }
+  return DEFAULT_SUBJECTS.slice();
+}
+function subjectDescs() {
+  try { const o = JSON.parse(S.subject_desc); if (o && typeof o === 'object' && !Array.isArray(o)) return o; } catch (e) { /* ว่าง */ }
+  return {};
+}
+const feeEach = () => { const v = Number(S.subject_fee); return isNaN(v) || S.subject_fee === '' ? 60 : v; };
+// ค่าสมัครของผู้สมัคร 1 คนที่เลือก n วิชา: flat = เหมาต่อท่าน, each = คูณจำนวนวิชา (ต้องตรงกับฟังก์ชัน fee_for ในฐานข้อมูล)
+function feeFor(n) {
+  if (!n) return 0;
+  if (S.fee_mode === 'each') return n * feeEach();
+  const f = Number(S.fee_flat);
+  return isNaN(f) || S.fee_flat === '' ? 60 : f;
+}
+const subjectMax = () => { const v = Number(S.subject_max); return v > 0 ? v : 100; };
+const passMark = () => { const p = Number(S.pass_score); return subjectMax() * (isNaN(p) || S.pass_score === '' ? 50 : p) / 100; };
 
 /* ---------------------------------------------------------------------
    การสลับหน้า (hash routing เช่น #register, #results)
@@ -95,6 +115,7 @@ function showView(view, param) {
   if (view === 'schoolreg') applySchoolStatus();
   if (view === 'news') loadNewsPage();
   if (view === 'newsdetail') loadNewsDetail(param);
+  if (view === 'results' && typeof loadLeaderboard === 'function') loadLeaderboard();
   if (view === 'admindash') loadAdminData();
 }
 function go(view) {
@@ -112,7 +133,8 @@ function applySettings() {
     if (v !== undefined && v !== '') el.textContent = v;
   });
   document.title = (S.site_name || 'SciMath Test') + ' — ระบบรับสมัครสอบ';
-  const fee = feeEach();
+  applyBranding();
+  renderSubjectsUI();
   updateFeeTotal();
   $('footerBottom').textContent = '© ' + (new Date().getFullYear() + 543) + ' ' + (S.org_name || '');
   renderStatusBanner();
@@ -151,9 +173,84 @@ function renderCountdown() {
 }
 
 /* คำถามที่พบบ่อย */
+
+/* ---------------------------------------------------------------------
+   โลโก้ / ตรา (อัปโหลดได้ที่ เจ้าหน้าที่ > ตั้งค่าระบบ)
+--------------------------------------------------------------------- */
+let defaultBrandMark = null;
+function applyBranding() {
+  const brand = document.querySelector('header.site .brand');
+  if (brand) {
+    const mark = brand.querySelector('.brand-mark');
+    if (mark && defaultBrandMark === null && mark.tagName.toLowerCase() === 'svg') defaultBrandMark = mark.outerHTML;
+    const logo = safeImg(S.logo_data);
+    const html = logo ? '<img class="brand-mark" src="' + logo + '" alt="" style="object-fit:contain;">' : defaultBrandMark;
+    if (mark && html) { const tmp = document.createElement('div'); tmp.innerHTML = html; mark.replaceWith(tmp.firstElementChild); }
+  }
+  if ($('brandTag')) $('brandTag').textContent = S.site_tagline ? ' — ' + S.site_tagline : '';
+  const logo2 = safeImg(S.logo_data);
+  let ic = document.querySelector('link[rel="icon"]');
+  if (logo2) {
+    if (!ic) { ic = document.createElement('link'); ic.rel = 'icon'; document.head.appendChild(ic); }
+    ic.href = logo2;
+  }
+}
+// ตราบนบัตรสอบ/ใบแจ้งผล: ใช้โลโก้ที่อัปโหลด ถ้าไม่มีใช้ตราอะตอมเริ่มต้น
+function cardEmblemHtml() {
+  const logo = safeImg(S.logo_data);
+  if (logo) return '<img class="ec-emblem" src="' + logo + '" alt="" style="object-fit:contain;">';
+  return '<svg class="ec-emblem" viewBox="0 0 96 96" fill="none"><circle cx="48" cy="48" r="46" fill="none" stroke="#F5A623" stroke-width="2" stroke-dasharray="2 5"/>' +
+    '<circle cx="48" cy="48" r="40" fill="#0B1226"/><circle cx="48" cy="48" r="7" fill="#F5A623"/>' +
+    '<ellipse cx="48" cy="48" rx="32" ry="14" stroke="#1F9C87" stroke-width="2.5" fill="none"/>' +
+    '<ellipse cx="48" cy="48" rx="32" ry="14" stroke="#F5A623" stroke-width="2.5" fill="none" transform="rotate(60 48 48)"/>' +
+    '<ellipse cx="48" cy="48" rx="32" ry="14" stroke="#E85C4A" stroke-width="2.5" fill="none" transform="rotate(120 48 48)"/></svg>';
+}
+
+/* ---------------------------------------------------------------------
+   ส่วนหน้าเว็บที่ขึ้นกับรายชื่อวิชา: การ์ดวิชา · ช่องติ๊กสมัคร · ตัวกรอง · ช่องเลือกวิชาของแอดมิน
+--------------------------------------------------------------------- */
+const SUBJECT_COLORS = ['#E85C4A', '#1F9C87', '#F5A623', '#4A7BE8', '#8E5BD6', '#D6458B', '#2E9CCA', '#7A8B2F'];
+function renderSubjectsUI() {
+  const subs = getSubjects(), desc = subjectDescs(), n = subs.length;
+  const total = feeFor(n);
+  const feeText = S.fee_mode === 'each'
+    ? 'ค่าสมัครวิชาละ ' + feeEach() + ' บาท (สอบครบ ' + n + ' วิชา = ' + total + ' บาท)'
+    : 'ค่าสมัครสอบท่านละ ' + total + ' บาท สมัครครั้งเดียวสอบครบทั้ง ' + n + ' วิชา';
+  if ($('subjHeading')) $('subjHeading').textContent = 'สอบวัดความรู้ ทั้ง ' + n + ' วิชา';
+  if ($('feeSummary')) $('feeSummary').textContent = feeText;
+
+  if ($('subjectGrid')) {
+    $('subjectGrid').innerHTML = subs.map((s, i) => {
+      const col = SUBJECT_COLORS[i % SUBJECT_COLORS.length];
+      return '<div class="card subject-card"><svg class="icon" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="' + col + '" opacity=".12"/>' +
+        '<text x="22" y="28" text-anchor="middle" font-family="Kanit,sans-serif" font-weight="700" font-size="17" fill="' + col + '">' + (i + 1) + '</text></svg>' +
+        '<h3>' + esc(s) + '</h3><p>' + esc(desc[s] || '') + '</p></div>';
+    }).join('');
+  }
+
+  if ($('regSubjectBox')) {
+    const was = !!document.querySelector('.subj-check:checked');
+    $('regSubjectBox').innerHTML = '<label class="check-row"><input type="checkbox" class="subj-check" id="f-allsubj" onchange="updateFeeTotal()"' + (was ? ' checked' : '') + '>' +
+      '<span class="ct"><span class="t">สอบวัดความรู้ ทั้ง ' + n + ' วิชา</span><br><span class="d">' + esc(subs.join(' · ')) + '</span></span>' +
+      '<span class="fee-tag">' + esc(total) + ' ฿</span></label>' +
+      '<div class="hint" style="margin-top:8px;">' + esc(feeText) + '</div>';
+  }
+
+  if ($('admSubjFilter')) {
+    const cur = $('admSubjFilter').value;
+    $('admSubjFilter').innerHTML = '<option value="">ทุกวิชา</option>' + subs.map((s) => '<option value="' + esc(s) + '">' + esc(s) + '</option>').join('');
+    $('admSubjFilter').value = subs.indexOf(cur) !== -1 ? cur : '';
+  }
+  if ($('afSubjects')) {
+    const checked = Array.from(document.querySelectorAll('.af-subj:checked')).map((c) => c.value);
+    $('afSubjects').innerHTML = subs.map((s) => '<label class="check-row"><input type="checkbox" class="af-subj" value="' + esc(s) + '"' +
+      (checked.indexOf(s) !== -1 ? ' checked' : '') + '><span class="ct"><span class="t">' + esc(s) + '</span></span></label>').join('');
+  }
+}
+
 const FAQS = [
   ['สมัครสอบได้ถึงเมื่อไหร่?', 'ดูช่วงเวลารับสมัครได้ที่แถบด้านบนของเว็บไซต์และหัวข้อ "กำหนดการ" ระบบจะหยุดรับสมัครเมื่อเจ้าหน้าที่ปิดรับสมัคร'],
-  ['สมัครได้กี่วิชา?', 'สมัครครั้งเดียวสอบครบทั้ง 5 วิชา (คณิตศาสตร์ วิทยาศาสตร์ ภาษาไทย ภาษาอังกฤษ สังคมศึกษาฯ) ค่าสมัครท่านละ 60 บาท'],
+  ['สมัครได้กี่วิชา?', 'สมัครครั้งเดียวสอบวัดความรู้ครบทุกวิชาที่เปิดสอบ (ดูรายชื่อวิชาและค่าสมัครได้ที่หน้าแรก)'],
   ['ถ้ากรอกข้อมูลผิด แก้ไขได้หรือไม่?', 'กรุณาติดต่อเจ้าหน้าที่ผ่านเมนู "ติดต่อ" พร้อมแจ้งเลขที่สมัคร เพื่อให้เจ้าหน้าที่แก้ไขข้อมูลให้'],
   ['ลืมเลขที่สมัครหรือไม่แน่ใจว่าชำระเงินแล้วหรือยัง ทำอย่างไร?', 'ไปที่เมนู "เข้าสู่ระบบ" แล้วกรอกเลขประจำตัวประชาชนและวันเดือนปีเกิดของนักเรียนที่ใช้ตอนสมัคร']
 ];
@@ -171,41 +268,14 @@ function toggleFaq(i) { $('faq-' + i).classList.toggle('open'); }
 let regPhoto = null;   // { full, thumb } จากฟอร์มสมัคร
 let afPhoto = null;    // { full, thumb } จากฟอร์มแอดมิน
 
-function renderToDataUrl(img, maxH, quality) {
-  let w = img.width, h = img.height;
-  if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-  const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
-  const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, w, h);
-  ctx.drawImage(img, 0, 0, w, h);
-  return cv.toDataURL('image/jpeg', quality);
-}
-function compressImage(file) {
-  return new Promise((resolve, reject) => {
-    if (file.size > 8 * 1024 * 1024) { reject(new Error('ไฟล์รูปต้องมีขนาดไม่เกิน 8 MB')); return; }
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('อ่านไฟล์รูปไม่สำเร็จ'));
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('ไฟล์ที่เลือกไม่ใช่รูปภาพที่ถูกต้อง'));
-      img.onload = () => {
-        let full = renderToDataUrl(img, 480, 0.8);
-        if (full.length > 300000) full = renderToDataUrl(img, 420, 0.6);
-        resolve({ full: full, thumb: renderToDataUrl(img, 96, 0.7) });
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
 async function handlePhotoPick(input, previewId, target) {
   if (!input.files || !input.files[0]) return;
   const box = $(previewId);
   box.innerHTML = '<span class="ph">กำลังประมวลผล...</span>';
   try {
-    const p = await compressImage(input.files[0]);
+    // เปิดตัวปรับรูป (ลาก/ซูม) ถ้ามี media.js — ถ้ายกเลิกจะไม่เปลี่ยนรูปเดิม
+    const p = (typeof openCropper === 'function') ? await openCropper(input.files[0]) : await compressImage(input.files[0]);
+    if (!p) { box.innerHTML = '<span class="ph">ยังไม่มีรูป</span>'; input.value = ''; return; }
     if (target === 'reg') regPhoto = p; else afPhoto = p;
     box.innerHTML = '<img src="' + p.full + '" alt="รูปตัวอย่าง">';
   } catch (err) {
@@ -214,36 +284,6 @@ async function handlePhotoPick(input, previewId, target) {
     if (target === 'reg') regPhoto = null; else afPhoto = null;
     toast(err.message, true);
   }
-}
-
-// ย่อรูปทั่วไป (สลิป / รูปปกข่าว): ด้านยาวไม่เกิน maxSide แล้วลดคุณภาพจนไฟล์ไม่เกิน limit (ตัวอักษร base64)
-function compressToDataUrl(file, maxSide, quality, limit) {
-  return new Promise((resolve, reject) => {
-    if (file.size > 12 * 1024 * 1024) { reject(new Error('ไฟล์รูปต้องมีขนาดไม่เกิน 12 MB')); return; }
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('อ่านไฟล์รูปไม่สำเร็จ'));
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('ไฟล์ที่เลือกไม่ใช่รูปภาพที่ถูกต้อง'));
-      img.onload = () => {
-        let side = maxSide, q = quality, out = '';
-        for (let i = 0; i < 5; i++) {
-          const k = Math.min(1, side / Math.max(img.width, img.height));
-          const cv = document.createElement('canvas');
-          cv.width = Math.max(1, Math.round(img.width * k)); cv.height = Math.max(1, Math.round(img.height * k));
-          const ctx = cv.getContext('2d');
-          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-          ctx.drawImage(img, 0, 0, cv.width, cv.height);
-          out = cv.toDataURL('image/jpeg', q);
-          if (out.length <= limit) { resolve(out); return; }
-          side = Math.round(side * 0.8); q = Math.max(0.5, q - 0.08);
-        }
-        reject(new Error('รูปมีขนาดใหญ่เกินไป กรุณาใช้รูปที่เล็กลง'));
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
 }
 
 const slipData = { reg: null, school: null, portal: null };
@@ -281,8 +321,8 @@ async function loadHomeStats() {
    สมัครสอบ
 --------------------------------------------------------------------- */
 function updateFeeTotal() {
-  // ค่าสมัครเหมาต่อคน: เลือกอย่างน้อย 1 วิชา = ท่านละ feeEach() บาท
-  const total = document.querySelectorAll('.subj-check:checked').length ? feeEach() : 0;
+  // ติ๊กเดียว = สอบครบทุกวิชา → ค่าสมัครตามวิธีคิดใน ตั้งค่าระบบ
+  const total = document.querySelector('.subj-check:checked') ? feeFor(getSubjects().length) : 0;
   $('feeTotalDisplay').textContent = total + ' ฿';
   if ($('payTotal')) $('payTotal').textContent = total + ' ฿';
 }
@@ -291,11 +331,11 @@ async function submitRegistration(evt) {
   evt.preventDefault();
   clearErr('regError');
   const idcard = idDigits($('f-idcard').value);
-  const subjects = document.querySelector('.subj-check:checked') ? SUBJECTS.slice() : []; // ติ๊กเดียว = สอบครบทั้ง 5 วิชา
+  const subjects = document.querySelector('.subj-check:checked') ? getSubjects() : []; // ติ๊กเดียว = สอบครบทุกวิชาที่เปิดสอบ
 
   if (S.reg_open !== '1') { showErr('regError', 'ขณะนี้ปิดรับสมัครสอบแล้ว'); return false; }
   if (!/^\d{13}$/.test(idcard)) { showErr('regError', 'เลขประจำตัวประชาชนต้องเป็นตัวเลข 13 หลัก'); return false; }
-  if (!subjects.length) { showErr('regError', 'กรุณาติ๊กเลือก "สอบวัดความรู้ ทั้ง 5 วิชา" เพื่อสมัครสอบ'); return false; }
+  if (!subjects.length) { showErr('regError', 'กรุณาติ๊กเลือก "สอบวัดความรู้ ทั้ง ' + getSubjects().length + ' วิชา" เพื่อสมัครสอบ'); return false; }
   if (S.require_photo === '1' && !regPhoto) { showErr('regError', 'กรุณาอัปโหลดรูปถ่ายติดบัตรของนักเรียน'); return false; }
   if (S.require_slip === '1' && !slipData.reg) { showErr('regError', 'กรุณาแนบสลิปการชำระเงิน'); return false; }
 
@@ -490,10 +530,7 @@ async function checkResults(evt) {
       return false;
     }
     if (!r.found) { showErr('resultsError', 'ไม่พบข้อมูลผู้สมัครสอบ กรุณาตรวจสอบเลขประจำตัวประชาชนและวันเดือนปีเกิดอีกครั้ง'); return false; }
-    $('resultsOutput').innerHTML =
-      '<div class="card receipt" style="text-align:left;"><h3 style="text-align:center;">' + esc(r.prefix + r.first_name + ' ' + r.last_name) + '</h3>' +
-      '<p style="text-align:center; color:var(--ink-light); font-size:.85rem;">เลขที่สมัคร ' + esc(r.app_no) + '</p>' +
-      '<div class="receipt-detail" style="margin-top:14px;">' + resultRowsHtml(r.subjects) + '</div></div>';
+    $('resultsOutput').innerHTML = resultCardHtml(r);
   } catch (err) { showErr('resultsError', err.message); }
   return false;
 }
@@ -507,11 +544,7 @@ function examCardHtml(rec) {
   const room = (rec.exam_room || '').trim();
   const seat = (rec.seat_no || '').trim();
   return '<div class="exam-card"><div class="exam-card-head">' +
-    '<svg class="ec-emblem" viewBox="0 0 96 96" fill="none"><circle cx="48" cy="48" r="46" fill="none" stroke="#F5A623" stroke-width="2" stroke-dasharray="2 5"/>' +
-    '<circle cx="48" cy="48" r="40" fill="#0B1226"/><circle cx="48" cy="48" r="7" fill="#F5A623"/>' +
-    '<ellipse cx="48" cy="48" rx="32" ry="14" stroke="#1F9C87" stroke-width="2.5" fill="none"/>' +
-    '<ellipse cx="48" cy="48" rx="32" ry="14" stroke="#F5A623" stroke-width="2.5" fill="none" transform="rotate(60 48 48)"/>' +
-    '<ellipse cx="48" cy="48" rx="32" ry="14" stroke="#E85C4A" stroke-width="2.5" fill="none" transform="rotate(120 48 48)"/></svg>' +
+    cardEmblemHtml() +
     '<div><div class="ec-org">' + esc(S.org_name) + '</div><div class="ec-sub">บัตรประจำตัวผู้เข้าสอบ ' + esc(S.site_name) + '</div></div></div>' +
     '<div class="exam-card-body"><div class="exam-card-photo">' +
     (photo ? '<img src="' + photo + '" alt="รูปถ่ายผู้เข้าสอบ">' : '<div class="noimg">ไม่มีรูปถ่าย<br>กรุณาติดต่อเจ้าหน้าที่</div>') + '</div>' +
@@ -593,6 +626,7 @@ async function loadAdminData() {
   renderAdminTable();
   renderAdminResultsTable();
   renderSettingsPanel();
+  loadRankings();
   renderAdminNews();
   loadBatches();
 }
@@ -675,17 +709,21 @@ async function printCardFor(id) {
 function exportCSV() {
   if (!applicantsCache.length) { toast('ยังไม่มีข้อมูลผู้สมัคร', true); return; }
   const head = ['เลขที่สมัคร', 'คำนำหน้า', 'ชื่อ', 'นามสกุล', 'เลขบัตรประชาชน', 'วันเกิด', 'ระดับชั้น', 'โรงเรียน', 'วิชาที่สมัคร',
-    'ห้องสอบ', 'เลขที่นั่ง', 'ค่าธรรมเนียม', 'สถานะอนุมัติ', ...SUBJECTS.map((s) => 'คะแนน' + s), 'ผู้ปกครอง', 'เบอร์โทร', 'อีเมล', 'จังหวัด', 'วันที่สมัคร'];
+    'ห้องสอบ', 'เลขที่นั่ง', 'ค่าธรรมเนียม', 'สถานะอนุมัติ', ...getSubjects().map((s) => 'คะแนน' + s), 'ผู้ปกครอง', 'เบอร์โทร', 'อีเมล', 'จังหวัด', 'วันที่สมัคร'];
   const score = (a, s) => { const x = (a.applicant_subjects || []).find((y) => y.subject === s); return x && x.score != null ? x.score : ''; };
   const rows = applicantsCache.map((a) => [a.app_no, a.prefix, a.first_name, a.last_name, a.id_card, a.birth_date, a.grade, a.school,
-    a.subjects.join('/'), a.exam_room || '', a.seat_no || '', a.fee, statusLabel(a.approval_status), ...SUBJECTS.map((s) => score(a, s)),
+    a.subjects.join('/'), a.exam_room || '', a.seat_no || '', a.fee, statusLabel(a.approval_status), ...getSubjects().map((s) => score(a, s)),
     a.guardian_name, a.guardian_phone, a.email || '', a.address || '', a.submitted_at]);
-  // ป้องกัน CSV/Excel formula injection: เติม ' หน้าค่าที่ขึ้นต้นด้วยอักขระอันตราย
+  downloadCSV([head].concat(rows), 'scimath_applicants.csv');
+}
+
+// ดาวน์โหลด CSV (rows[0] = หัวตาราง) — ป้องกัน CSV/Excel formula injection และเปิดใน Excel ภาษาไทยได้
+function downloadCSV(rows, filename) {
   const cell = (v) => { let t = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
-  const csv = [head].concat(rows).map((r) => r.map(cell).join(',')).join('\n');
+  const csv = rows.map((r) => r.map(cell).join(',')).join('\n');
   const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
   const link = document.createElement('a');
-  link.href = url; link.download = 'scimath_applicants.csv';
+  link.href = url; link.download = filename || 'export.csv';
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
@@ -751,7 +789,7 @@ async function saveApplicantForm(evt) {
   if (afPhoto) { fields.photo_data = afPhoto.full; fields.thumb_data = afPhoto.thumb; }
 
   try {
-    await withBusy($('afSubmitBtn'), 'กำลังบันทึก...', () => API.saveApplicant(id, fields, subjects, feeEach()));
+    await withBusy($('afSubmitBtn'), 'กำลังบันทึก...', () => API.saveApplicant(id, fields, subjects, feeFor(subjects.length)));
     toast(id ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มผู้สมัครเรียบร้อยแล้ว');
     go('admindash');
   } catch (err) { showErr('afError', err.message); }
@@ -761,8 +799,10 @@ async function saveApplicantForm(evt) {
 /* ----- ผลสอบ ----- */
 function renderAdminResultsTable() {
   const tbody = $('admResultsBody');
+  const subjList = getSubjects(), maxScore = subjectMax();
+  if ($('admResultsHead')) $('admResultsHead').innerHTML = '<tr><th>เลขที่สมัคร</th><th>ชื่อ-นามสกุล</th>' + subjList.map((s) => '<th>' + esc(s) + '</th>').join('') + '<th></th></tr>';
   if (!applicantsCache.length) {
-    tbody.innerHTML = '<tr><td colspan="' + (SUBJECTS.length + 3) + '" style="text-align:center; color:var(--ink-light);">ยังไม่มีผู้สมัครสอบ</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + (subjList.length + 3) + '" style="text-align:center; color:var(--ink-light);">ยังไม่มีผู้สมัครสอบ</td></tr>';
     return;
   }
   tbody.innerHTML = applicantsCache.slice(0, 500).map((a) => {
@@ -772,7 +812,7 @@ function renderAdminResultsTable() {
       const cur = byS[subj];
       if (!cur) return '<span style="color:var(--ink-light);">—</span>';
       const sel = cur.passed === true ? '1' : cur.passed === false ? '0' : '';
-      return '<div class="result-cell"><input type="number" min="0" max="100" step="0.5" value="' + (cur.score == null ? '' : esc(cur.score)) +
+      return '<div class="result-cell"><input type="number" min="0" max="' + maxScore + '" step="0.5" value="' + (cur.score == null ? '' : esc(cur.score)) +
         '" data-aid="' + Number(a.id) + '" data-subj="' + esc(subj) + '" data-f="score" oninput="autoPass(this)">' +
         '<select data-aid="' + Number(a.id) + '" data-subj="' + esc(subj) + '" data-f="passed" onchange="markDirty(this)">' +
         '<option value=""' + (sel === '' ? ' selected' : '') + '>— ยังไม่ระบุ</option>' +
@@ -780,7 +820,7 @@ function renderAdminResultsTable() {
         '<option value="0"' + (sel === '0' ? ' selected' : '') + '>ไม่ผ่าน</option></select></div>';
     };
     return '<tr data-rid="' + Number(a.id) + '"><td class="mono">' + esc(a.app_no) + '</td><td>' + esc(a.prefix + a.first_name + ' ' + a.last_name) + '</td>' +
-      SUBJECTS.map((s) => '<td>' + cell(s) + '</td>').join('') +
+      subjList.map((s) => '<td>' + cell(s) + '</td>').join('') +
       '<td><button class="btn btn-outline" style="padding:6px 12px; font-size:.78rem;" onclick="saveApplicantResults(' + Number(a.id) + ')">บันทึก</button></td></tr>';
   }).join('');
 }
@@ -789,20 +829,20 @@ function autoPass(input) {
   markDirty(input);
   const sel = input.parentElement.querySelector('select');
   if (input.value === '') { sel.value = ''; return; }
-  sel.value = Number(input.value) >= (Number(S.pass_score) || 50) ? '1' : '0';
+  sel.value = Number(input.value) >= passMark() ? '1' : '0';
 }
 async function persistResultsRow(id) {
   const a = applicantsCache.find((x) => x.id === id);
   const tr = document.querySelector('tr[data-rid="' + id + '"]');
   if (!a || !tr) return;
-  for (const subj of SUBJECTS) {
+  for (const subj of getSubjects()) {
     const inp = tr.querySelector('input[data-subj="' + subj + '"]');
     const sel = tr.querySelector('select[data-subj="' + subj + '"]');
     if (!inp) continue;
     let score = inp.value === '' ? null : Number(inp.value);
-    if (score != null && (isNaN(score) || score < 0 || score > 100)) throw new Error('คะแนนต้องอยู่ระหว่าง 0–100');
+    if (score != null && (isNaN(score) || score < 0 || score > subjectMax())) throw new Error('คะแนนต้องอยู่ระหว่าง 0–' + subjectMax());
     let passed = sel.value === '' ? null : sel.value === '1';
-    if (passed === null && score != null) passed = score >= (Number(S.pass_score) || 50);
+    if (passed === null && score != null) passed = score >= passMark();
     await API.saveScore(id, subj, score, passed);
     const rec = (a.applicant_subjects || []).find((x) => x.subject === subj);
     if (rec) { rec.score = score; rec.passed = passed; }
@@ -810,7 +850,7 @@ async function persistResultsRow(id) {
   delete tr.dataset.dirty;
 }
 async function saveApplicantResults(id) {
-  try { await persistResultsRow(id); toast('บันทึกผลสอบแล้ว'); renderAdminResultsTable(); }
+  try { await persistResultsRow(id); toast('บันทึกผลสอบแล้ว'); renderAdminResultsTable(); loadRankings(); }
   catch (err) { toast(err.message, true); }
 }
 async function saveAllResults() {
@@ -821,7 +861,8 @@ async function saveAllResults() {
     for (const tr of rows) { await persistResultsRow(Number(tr.dataset.rid)); ok++; }
     toast('บันทึกผลสอบแล้ว ' + ok + ' รายการ');
     renderAdminResultsTable();
-  } catch (err) { toast('บันทึกได้ ' + ok + ' รายการ แล้วหยุด: ' + err.message, true); }
+    loadRankings();
+  } catch (err) { toast('บันทึกได้ ' + ok + ' รายการ แล้วหยุด: ' + err.message, true); loadRankings(); }
 }
 
 async function onToggleResultsStatus() {
@@ -841,8 +882,7 @@ async function saveResultsMessage() {
 /* ----- ตั้งค่าระบบ ----- */
 const SETTING_FIELDS = [
   { k: 'org_name', l: 'ชื่อหน่วยงาน' }, { k: 'site_name', l: 'ชื่อโครงการ / ระบบ' },
-  { k: 'app_prefix', l: 'คำนำหน้าเลขที่สมัคร (เช่น SM69-)' }, { k: 'subject_fee', l: 'ค่าสมัครสอบต่อท่าน (บาท)', t: 'number' },
-  { k: 'pass_score', l: 'คะแนนผ่านเกณฑ์ (0–100)', t: 'number' }, { k: 'exam_date_iso', l: 'วัน-เวลาสอบ (ใช้นับถอยหลัง)', t: 'datetime' },
+  { k: 'app_prefix', l: 'คำนำหน้าเลขที่สมัคร (เช่น SM69-)' }, { k: 'exam_date_iso', l: 'วัน-เวลาสอบ (ใช้นับถอยหลัง)', t: 'datetime' },
   { k: 'exam_date_display', l: 'วันสอบ (ข้อความที่แสดง)' }, { k: 'exam_time_display', l: 'เวลาสอบ (ข้อความที่แสดง)' },
   { k: 'exam_site_name', l: 'ชื่อสนามสอบ' }, { k: 'exam_venue_display', l: 'ข้อความห้องสอบ (เมื่อยังไม่กำหนดห้อง)' },
   { k: 'date_reg', l: 'กำหนดการ: ช่วงรับสมัคร' }, { k: 'date_list', l: 'กำหนดการ: ประกาศรายชื่อผู้มีสิทธิ์สอบ' },
@@ -881,6 +921,10 @@ function renderSettingsPanel() {
   }
   html += wide.map(field).join('');
   $('generalSettings').innerHTML = html;
+  // ส่วนที่แยกไฟล์: โลโก้/ชื่อ (settings.js) วิชา+ค่าสมัคร (settings.js) เกณฑ์สิทธิ์ (results.js)
+  if (typeof renderBrandingPanel === 'function') renderBrandingPanel();
+  if (typeof renderSubjectsEditor === 'function') renderSubjectsEditor();
+  if (typeof renderRulesEditor === 'function') renderRulesEditor();
 }
 async function onToggleRegStatus() {
   const on = $('admOpenToggle').checked;
@@ -910,7 +954,6 @@ async function saveGeneralSettings() {
     else if (f.t === 'datetime') obj[f.k] = el.value ? el.value + ':00+07:00' : '';
     else obj[f.k] = el.value.trim();
   }
-  if (obj.subject_fee !== '' && !(Number(obj.subject_fee) >= 0)) { toast('ค่าธรรมเนียมต้องเป็นตัวเลข', true); return; }
   if (!obj.app_prefix) { toast('กรุณากรอกคำนำหน้าเลขที่สมัคร', true); return; }
   try {
     await API.saveSettings(obj);

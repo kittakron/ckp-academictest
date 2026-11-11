@@ -90,12 +90,16 @@ end $$;
 create table if not exists public.applicant_subjects (
   id           bigint generated always as identity primary key,
   applicant_id bigint not null references public.applicants(id) on delete cascade,
-  subject      text not null check (subject in ('วิทยาศาสตร์','คณิตศาสตร์')),
-  fee          integer not null default 150,
+  subject      text not null check (subject in ('คณิตศาสตร์','วิทยาศาสตร์','ภาษาไทย','ภาษาอังกฤษ','สังคมศึกษาฯ')),
+  fee          integer not null default 0,
   score        numeric(5,2),
   passed       boolean,
   unique (applicant_id, subject)
 );
+
+-- ขยายรายชื่อวิชาที่อนุญาต (รันซ้ำได้) — วิชาเดิมในข้อมูลที่มีอยู่ไม่ถูกกระทบ
+alter table public.applicant_subjects drop constraint if exists applicant_subjects_subject_check;
+alter table public.applicant_subjects alter column fee set default 0;
 
 -- ข่าวสาร (ตารางเดิมชื่อ announcements — ขยายให้มีเนื้อหาเต็ม รูปปก และปักหมุด)
 create table if not exists public.announcements (
@@ -231,7 +235,7 @@ insert into public.settings (key, value) values
   ('site_name',           'SciMath Test'),
   ('app_prefix',          'SM69-'),
   ('batch_prefix',        'SCH69-'),
-  ('subject_fee',         '150'),
+  ('subject_fee',         '60'),
   ('pass_score',          '50'),
   ('reg_open',            '1'),
   ('reg_closed_message',  'ระบบจะเปิดรับสมัครรอบถัดไปเร็ว ๆ นี้ กรุณาติดตามประกาศ'),
@@ -254,6 +258,56 @@ insert into public.settings (key, value) values
   ('contact_address',     'ศูนย์พัฒนาอัจฉริยภาพวิทยาศาสตร์-คณิตศาสตร์ (แก้ไขที่อยู่ได้ที่หน้าแอดมิน > ตั้งค่าระบบ)'),
   ('bank_info',           'ธนาคารออมสิน เลขที่บัญชี 020-XXX-XXXX ชื่อบัญชี โครงการ SciMath Test')
 on conflict (key) do nothing;
+
+-- ค่าตั้งต้นของวิชา/ค่าสมัคร/เกณฑ์ผลสอบ (แก้ได้ที่ เจ้าหน้าที่ > ตั้งค่าระบบ)
+insert into public.settings (key, value) values
+  ('subjects',          '["คณิตศาสตร์","วิทยาศาสตร์","ภาษาไทย","ภาษาอังกฤษ","สังคมศึกษาฯ"]'),
+  ('subject_desc',      '{}'),
+  ('fee_mode',          'flat'),
+  ('fee_flat',          '60'),
+  ('subject_max',       '100'),
+  ('award_rules',       '[]'),
+  ('results_show_top',  '0'),
+  ('results_top_n',     '10'),
+  ('site_tagline',      'ระบบรับสมัครสอบวัดความรู้ ระดับประถมศึกษา'),
+  ('logo_data',         '')
+on conflict (key) do nothing;
+
+create or replace function public.safe_json_array(t text)
+returns jsonb language plpgsql immutable as $$
+begin
+  if t is null or t = '' then return '[]'::jsonb; end if;
+  begin
+    return case when jsonb_typeof(t::jsonb) = 'array' then t::jsonb else '[]'::jsonb end;
+  exception when others then return '[]'::jsonb;
+  end;
+end $$;
+
+-- รายชื่อวิชาที่เปิดสอบ (เรียงตามที่ตั้งไว้) — ถ้าตั้งค่าเสียจะใช้ 5 วิชาเริ่มต้น
+create or replace function public.app_subjects()
+returns text[] language plpgsql stable security definer set search_path = public as $$
+declare r text[];
+begin
+  select array_agg(x order by o) into r
+    from jsonb_array_elements_text(public.safe_json_array((select value from settings where key = 'subjects')))
+         with ordinality as t(x, o);
+  if r is null or array_length(r, 1) is null then
+    r := array['คณิตศาสตร์','วิทยาศาสตร์','ภาษาไทย','ภาษาอังกฤษ','สังคมศึกษาฯ'];
+  end if;
+  return r;
+end $$;
+
+-- ค่าสมัครของผู้สมัคร 1 คน: flat = เหมาต่อท่าน, each = คูณจำนวนวิชา
+create or replace function public.fee_for(n integer)
+returns integer language plpgsql stable security definer set search_path = public as $$
+declare m text; v_flat integer; v_each integer;
+begin
+  select value into m from settings where key = 'fee_mode';
+  v_flat := coalesce(nullif((select value from settings where key = 'fee_flat'), '')::integer, 60);
+  v_each := coalesce(nullif((select value from settings where key = 'subject_fee'), '')::integer, 60);
+  if coalesce(m, 'flat') = 'each' then return coalesce(n, 0) * v_each; end if;
+  return v_flat;
+end $$;
 
 -- อัปเกรดจาก v1: ผู้ที่เคย "ชำระแล้ว" ให้ถือว่า "อนุมัติแล้ว" (ทำครั้งเดียว)
 do $$
@@ -314,8 +368,8 @@ begin
   select value into v_open      from settings where key = 'reg_open';
   select value into v_req_photo from settings where key = 'require_photo';
   select value into v_req_slip  from settings where key = 'require_slip';
-  select coalesce(nullif(value,'')::integer, 150) into v_fee_each from settings where key = 'subject_fee';
-  v_fee_each := coalesce(v_fee_each, 150);
+  select coalesce(nullif(value,'')::integer, 60) into v_fee_each from settings where key = 'subject_fee';
+  v_fee_each := coalesce(v_fee_each, 60);
 
   if coalesce(v_open,'1') <> '1' then raise exception 'ขณะนี้ปิดรับสมัครสอบแล้ว'; end if;
   if v_id_card !~ '^\d{13}$' then raise exception 'เลขประจำตัวประชาชนต้องเป็นตัวเลข 13 หลัก'; end if;
@@ -337,7 +391,7 @@ begin
 
   select array_agg(distinct x) into v_subjects
   from jsonb_array_elements_text(coalesce(p->'subjects','[]'::jsonb)) as t(x)
-  where x in ('วิทยาศาสตร์','คณิตศาสตร์');
+  where x = any(public.app_subjects());
   if v_subjects is null or array_length(v_subjects,1) = 0 then
     raise exception 'กรุณาเลือกวิชาที่ต้องการสมัครสอบอย่างน้อย 1 วิชา';
   end if;
@@ -353,7 +407,7 @@ begin
     raise exception 'เลขประจำตัวประชาชนนี้เคยสมัครสอบไว้แล้ว กรุณาเข้าสู่ระบบเพื่อตรวจสอบสถานะ';
   end if;
 
-  v_fee := array_length(v_subjects,1) * v_fee_each;
+  v_fee := public.fee_for(array_length(v_subjects,1));  -- ตามวิธีคิดใน ตั้งค่าระบบ (เหมาต่อท่าน / ตามจำนวนวิชา)
 
   insert into applicants (id_card, birth_date, prefix, first_name, last_name, grade, school, fee,
                           guardian_name, guardian_phone, email, address, photo_data, thumb_data,
@@ -366,7 +420,7 @@ begin
   returning id, app_no into v_new_id, v_app_no;
 
   foreach s in array v_subjects loop
-    insert into applicant_subjects (applicant_id, subject, fee) values (v_new_id, s, v_fee_each);
+    insert into applicant_subjects (applicant_id, subject, fee) values (v_new_id, s, 0);
   end loop;
 
   return jsonb_build_object(
@@ -457,7 +511,8 @@ security definer
 set search_path = public
 as $$
 declare
-  a applicants%rowtype; v_pub text; v_msg text; v_subj jsonb;
+  a applicants%rowtype; v_pub text; v_msg text; v_subj jsonb; v_max numeric;
+  v_rr jsonb;
 begin
   select value into v_pub from settings where key = 'results_published';
   select value into v_msg from settings where key = 'results_message';
@@ -468,14 +523,30 @@ begin
   select * into a from applicants where id_card = public.digits(p_id_card) and birth_date = p_birth;
   if not found then return jsonb_build_object('published', true, 'found', false); end if;
 
+  v_max := coalesce(nullif((select value from settings where key = 'subject_max'), '')::numeric, 100);
+
   select coalesce(jsonb_agg(jsonb_build_object('subject', s.subject, 'score', s.score, 'passed', s.passed)
-                            order by s.subject), '[]'::jsonb)
+                            order by array_position(public.app_subjects(), s.subject), s.subject), '[]'::jsonb)
     into v_subj from applicant_subjects s where s.applicant_id = a.id;
 
-  return jsonb_build_object('published', true, 'found', true, 'app_no', a.app_no, 'prefix', a.prefix,
-                            'first_name', a.first_name, 'last_name', a.last_name, 'subjects', v_subj);
+  select to_jsonb(r) into v_rr from public.ranked_results() r where r.id = a.id;   -- ว่างถ้าไม่ได้รับอนุมัติ
+
+  return jsonb_build_object(
+    'published', true, 'found', true, 'approved', a.approval_status = 'approved',
+    'app_no', a.app_no, 'prefix', a.prefix, 'first_name', a.first_name, 'last_name', a.last_name,
+    'grade', a.grade, 'school', a.school, 'subjects', v_subj, 'subject_max', v_max,
+    'total',      v_rr->'total',
+    'pct',        v_rr->'pct',
+    'complete',   coalesce((v_rr->>'complete')::boolean, false),
+    'rank_all',   v_rr->'rank_all',
+    'n_all',      v_rr->'n_all',
+    'rank_grade', v_rr->'rank_grade',
+    'n_grade',    v_rr->'n_grade',
+    'award',      v_rr->'award',
+    'award_detail', v_rr->'award_detail');
 end;
 $$;
+
 
 -- ---------------------------------------------------------------------
 -- RPC: สมัครแบบโรงเรียน (หลายคน) — ครูที่ปรึกษากรอกครั้งเดียว โอนยอดรวม สลิปเดียว
@@ -517,8 +588,8 @@ declare
 begin
   select value into v_open     from settings where key = 'reg_open';
   select value into v_req_slip from settings where key = 'require_slip';
-  select coalesce(nullif(value,'')::integer, 150) into v_fee_each from settings where key = 'subject_fee';
-  v_fee_each := coalesce(v_fee_each, 150);
+  select coalesce(nullif(value,'')::integer, 60) into v_fee_each from settings where key = 'subject_fee';
+  v_fee_each := coalesce(v_fee_each, 60);
 
   if coalesce(v_open,'1') <> '1' then raise exception 'ขณะนี้ปิดรับสมัครสอบแล้ว'; end if;
   if v_school = '' or v_t_name = '' then raise exception 'กรุณากรอกชื่อโรงเรียนและชื่อครูที่ปรึกษา'; end if;
@@ -555,9 +626,12 @@ begin
     if length(st->>'first_name') > 100 or length(st->>'last_name') > 100 then raise exception '% : ข้อมูลยาวเกินกำหนด', v_label; end if;
     select array_agg(distinct x) into v_subj
       from jsonb_array_elements_text(coalesce(st->'subjects','[]'::jsonb)) as t(x)
-     where x in ('วิทยาศาสตร์','คณิตศาสตร์');
+     where x = any(public.app_subjects());
     if v_subj is null or array_length(v_subj,1) = 0 then raise exception '% : กรุณาเลือกวิชาที่สมัครอย่างน้อย 1 วิชา', v_label; end if;
-    v_total := v_total + array_length(v_subj,1) * v_fee_each;
+    if nullif(st->>'photo_data','') is not null and not public.valid_data_img(st->>'photo_data', 400000) then
+      raise exception '% : รูปถ่ายไม่ถูกต้องหรือมีขนาดใหญ่เกินไป', v_label;
+    end if;
+    v_total := v_total + public.fee_for(array_length(v_subj,1));
   end loop;
 
   insert into school_batches (school_name, teacher_prefix, teacher_name, teacher_id_card, teacher_phone,
@@ -571,18 +645,21 @@ begin
     v_idc   := public.digits(st->>'id_card');
     v_birth := (st->>'birth_date')::date;
     select array_agg(distinct x) into v_subj
-      from jsonb_array_elements_text(st->'subjects') as t(x) where x in ('วิทยาศาสตร์','คณิตศาสตร์');
+      from jsonb_array_elements_text(st->'subjects') as t(x) where x = any(public.app_subjects());
 
     insert into applicants (id_card, birth_date, prefix, first_name, last_name, grade, school, fee,
-                            guardian_name, guardian_phone, batch_id)
+                            guardian_name, guardian_phone, batch_id, photo_data, thumb_data)
     values (v_idc, v_birth, trim(st->>'prefix'), trim(st->>'first_name'), trim(st->>'last_name'),
-            trim(st->>'grade'), v_school, array_length(v_subj,1) * v_fee_each,
+            trim(st->>'grade'), v_school, public.fee_for(array_length(v_subj,1)),
             coalesce(nullif(trim(coalesce(st->>'guardian_name','')),''), 'ครู ' || v_t_name),
-            coalesce(nullif(trim(coalesce(st->>'guardian_phone','')),''), v_t_phone), v_batch_id)
+            coalesce(nullif(trim(coalesce(st->>'guardian_phone','')),''), v_t_phone), v_batch_id,
+            nullif(st->>'photo_data',''),
+            case when nullif(st->>'thumb_data','') is not null and public.valid_data_img(st->>'thumb_data', 30000)
+                 then st->>'thumb_data' end)
     returning id, app_no into v_aid, v_app_no;
 
     foreach s in array v_subj loop
-      insert into applicant_subjects (applicant_id, subject, fee) values (v_aid, s, v_fee_each);
+      insert into applicant_subjects (applicant_id, subject, fee) values (v_aid, s, 0);
     end loop;
 
     v_out := v_out || jsonb_build_array(jsonb_build_object(
@@ -766,3 +843,93 @@ grant execute on function public.teacher_get_cards(text, text, bigint)          
 --   insert into public.admins (user_id)
 --   select id from auth.users where email = 'admin@yourschool.ac.th';
 -- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
+-- อันดับ: คำนวณในฐานข้อมูลที่เดียว (ผู้ได้รับอนุมัติและมีคะแนนครบทุกวิชาเท่านั้น)
+-- คะแนนเท่ากัน = อันดับเดียวกัน · สิทธิ์ = ข้อแรกที่เข้าเงื่อนไขตามลำดับในตั้งค่าระบบ
+-- ฟังก์ชันนี้ไม่เปิดให้เรียกตรง (ผ่าน admin_rankings / public_leaderboard / check_results เท่านั้น)
+-- ---------------------------------------------------------------------
+create or replace function public.ranked_results()
+returns table (id bigint, app_no text, full_name text, grade text, school text,
+               nsub integer, scored integer, total numeric, pct numeric, complete boolean,
+               rank_all integer, n_all integer, rank_grade integer, n_grade integer,
+               award text, award_detail text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with cfg as (
+    select coalesce(nullif((select value from settings where key = 'subject_max'), '')::numeric, 100) as mx,
+           public.safe_json_array((select value from settings where key = 'award_rules')) as rules
+  ),
+  base as (
+    select a.id as aid, a.app_no as ano, trim(a.prefix || a.first_name || ' ' || a.last_name) as nm,
+           a.grade as gr, a.school as sc,
+           count(*)::integer as ns, count(s.score)::integer as sd, coalesce(sum(s.score), 0)::numeric as tt
+      from applicants a join applicant_subjects s on s.applicant_id = a.id
+     where a.approval_status = 'approved'
+     group by a.id
+  ),
+  calc as (
+    select b.*, (b.sd = b.ns and b.ns > 0) as done,
+           case when b.ns > 0 then round(b.tt / (b.ns * (select mx from cfg)) * 100, 2) end as pc
+      from base b
+  ),
+  ra as (
+    select c.aid,
+           rank() over (order by c.tt desc)::integer as r_all,
+           rank() over (partition by c.gr order by c.tt desc)::integer as r_gr,
+           (count(*) over ())::integer as n_a,
+           (count(*) over (partition by c.gr))::integer as n_g
+      from calc c where c.done
+  )
+  select c.aid, c.ano, c.nm, c.gr, c.sc, c.ns, c.sd, c.tt, c.pc, c.done,
+         ra.r_all, ra.n_a, ra.r_gr, ra.n_g, aw.nm2, aw.dt
+    from calc c
+    left join ra on ra.aid = c.aid
+    left join lateral (
+      select r.val->>'name' as nm2, r.val->>'detail' as dt
+        from jsonb_array_elements((select rules from cfg)) with ordinality as r(val, o)
+       where c.done
+         and (r.val->>'min_pct' is null or c.pc >= (r.val->>'min_pct')::numeric)
+         and (r.val->>'max_rank_all' is null or ra.r_all <= (r.val->>'max_rank_all')::integer)
+         and (r.val->>'max_rank_grade' is null or ra.r_gr <= (r.val->>'max_rank_grade')::integer)
+       order by r.o limit 1
+    ) aw on true;
+$$;
+revoke all on function public.ranked_results() from public, anon, authenticated;
+
+create or replace function public.admin_rankings()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'ไม่มีสิทธิ์ดำเนินการนี้'; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'id', r.id, 'app_no', r.app_no, 'name', r.full_name, 'grade', r.grade, 'school', r.school,
+             'nsub', r.nsub, 'scored', r.scored, 'total', r.total, 'pct', r.pct, 'complete', r.complete,
+             'rank_all', r.rank_all, 'n_all', r.n_all, 'rank_grade', r.rank_grade, 'n_grade', r.n_grade,
+             'award', r.award, 'award_detail', r.award_detail)
+           order by r.rank_all nulls last, r.full_name)
+      from public.ranked_results() r), '[]'::jsonb);
+end $$;
+
+create or replace function public.public_leaderboard()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare v_pub text; v_show text; v_n integer;
+begin
+  select value into v_pub  from settings where key = 'results_published';
+  select value into v_show from settings where key = 'results_show_top';
+  if coalesce(v_pub, '0') <> '1' or coalesce(v_show, '0') <> '1' then
+    return jsonb_build_object('enabled', false);
+  end if;
+  v_n := least(50, greatest(1, coalesce(nullif((select value from settings where key = 'results_top_n'), '')::integer, 10)));
+  return jsonb_build_object('enabled', true, 'grades', coalesce((
+    select jsonb_agg(x.g order by x.g->>'grade') from (
+      select jsonb_build_object('grade', r.grade, 'rows', jsonb_agg(jsonb_build_object(
+               'rank', r.rank_grade, 'name', r.full_name, 'school', r.school,
+               'total', r.total, 'pct', r.pct, 'award', r.award) order by r.rank_grade, r.full_name)) as g
+        from public.ranked_results() r
+       where r.complete and r.rank_grade <= v_n
+       group by r.grade) x), '[]'::jsonb));
+end $$;

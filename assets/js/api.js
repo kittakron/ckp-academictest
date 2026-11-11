@@ -58,6 +58,7 @@
     studentLogin(idCard, birth) { return rpc('student_login', { p_id_card: idCard, p_birth: birth }); },
     uploadSlip(idCard, birth, slip) { return rpc('upload_slip', { p_id_card: idCard, p_birth: birth, p_slip: slip }); },
     checkResults(idCard, birth) { return rpc('check_results', { p_id_card: idCard, p_birth: birth }); },
+    publicLeaderboard() { return rpc('public_leaderboard', {}); },
 
     // ---------- ข่าวสาร (สาธารณะ) ----------
     async listNews(from, to) {
@@ -115,9 +116,10 @@
     async getApplicantFull(id) {
       return must(await need().from('applicants').select('*,applicant_subjects(subject,score,passed)').eq('id', id).single());
     },
-    async saveApplicant(id, fields, subjects, feeEach) {
+    // totalFee = ค่าสมัครรวมของผู้สมัครคนนี้ (app.js คำนวณตามวิธีคิดใน ตั้งค่าระบบ: เหมาต่อท่าน / ตามจำนวนวิชา)
+    async saveApplicant(id, fields, subjects, totalFee) {
       const c = need();
-      const row = Object.assign({}, fields, { fee: subjects.length * feeEach });
+      const row = Object.assign({}, fields, { fee: Number(totalFee) || 0 });
       let applicantId = id;
       if (id) {
         must(await c.from('applicants').update(row).eq('id', id));
@@ -129,7 +131,7 @@
         const ins = must(await c.from('applicants').insert(row).select('id,app_no').single());
         applicantId = ins.id;
       }
-      const subjRows = subjects.map(s => ({ applicant_id: applicantId, subject: s, fee: feeEach }));
+      const subjRows = subjects.map(s => ({ applicant_id: applicantId, subject: s, fee: 0 }));
       must(await c.from('applicant_subjects').upsert(subjRows, { onConflict: 'applicant_id,subject', ignoreDuplicates: true }));
       return applicantId;
     },
@@ -140,6 +142,9 @@
     async saveScore(applicantId, subject, score, passed) {
       must(await need().from('applicant_subjects').update({ score, passed }).eq('applicant_id', applicantId).eq('subject', subject));
     },
+
+    // ---------- เจ้าหน้าที่: อันดับผลสอบ ----------
+    adminRankings() { return rpc('admin_rankings', {}); },
 
     // ---------- เจ้าหน้าที่: กลุ่มโรงเรียน ----------
     async listBatches() {
